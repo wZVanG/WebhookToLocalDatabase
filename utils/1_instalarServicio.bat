@@ -48,7 +48,7 @@ rem Set Start type
 call :check_error "%NSSM_PATH% set ChangSincronizador Start SERVICE_AUTO_START"
 
 echo Servicio ChangSincronizador instalado exitosamente.
-echo Iniciando el servicio...
+echo Iniciando servicio...
 
 rem Start the service
 %NSSM_PATH% start ChangSincronizador

@@ -76,16 +76,16 @@ Aplicación Deno para escuchar Webhooks y ejecutar consultas en un servidor SQL 
     deno test --allow-read --allow-env --allow-net --allow-sys
     ```
 
-2. Crear ejecutable:
+2. Crear ejecutable en carpeta `_dist`:
 
     ```bash
-    deno compile --allow-read --allow-env --allow-net --allow-sys --no-terminal --output ./bin/Synchronizer.exe server.ts 
+    deno task appGenerator
     ```
 
 3. Tunnel dominio personalizado
 
 	```bash
-	ngrok http --domain=internal-golden-turtle.ngrok-free.app 8000
+	ngrok http --domain=your-free-domain.ngrok-free.app 8000
 	```
 
 4. Instalar como Servicio de windows (Ejecutar PowerShell como administrador)
