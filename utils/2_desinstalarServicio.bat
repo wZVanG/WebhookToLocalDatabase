@@ -1,30 +1,20 @@
 @echo off
-setlocal
-
-REM Configuración del servicio
-set "ServiceName=ChangSincronizador"
-
-REM Verificar privilegios de administrador
+:: Check for Administrator privileges
 net session >nul 2>&1
-if %errorLevel% neq 0 (
-    echo Este script requiere privilegios de administrador. Por favor, ejecútelo como administrador.
+if %errorlevel% neq 0 (
+    echo Este script requiere privilegios de administrador para ejecutarse.
     pause
-    exit /b 1
+    exit /b
 )
 
-REM Detener el servicio antes de eliminarlo
-sc stop "%ServiceName%"
-if %errorLevel% neq 0 (
-    echo No se pudo detener el servicio "%ServiceName%". Puede que no esté en ejecución o no exista.
-)
+rem Ruta completa a nssm.exe
+set NSSM_PATH=C:\ChangSync\nssm.exe
 
-REM Eliminar el servicio
-sc delete "%ServiceName%"
-if %errorLevel% neq 0 (
-    echo No se pudo eliminar el servicio "%ServiceName%". Puede que no exista.
-) else (
-    echo Servicio "%ServiceName%" eliminado exitosamente.
-)
+rem Stop the service if it's running
+%NSSM_PATH% stop ChangSincronizador >nul 2>&1
 
+rem Uninstall the service
+%NSSM_PATH% remove ChangSincronizador confirm >nul 2>&1
+
+echo Servicio ChangSincronizador eliminado exitosamente.
 pause
-endlocal

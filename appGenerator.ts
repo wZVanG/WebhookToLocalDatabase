@@ -49,7 +49,9 @@ await copy("utils", distDirLastVersion, { overwrite: true });
 const includeParams = controllerFiles.map((file) => `--include src/controllers/${file}`).join(" ");
 
 // 5. Ejecuta el comando ssh
+//--no-terminal --no-prompt --quiet
 const command = `deno compile --allow-read --allow-env --allow-net --allow-sys ${includeParams} --output ${distDirLastVersion}/ChangEcommerceSync.exe server.ts`;
+//const command = `deno compile -A --output ${distDirLastVersion}/ChangEcommerceSync.exe simple.ts`;
 
 //Escribir en console Ejecutando comando de color verde
 console.log(`\x1b[32mEjecutando comando:\x1b[0m`);

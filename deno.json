@@ -20,7 +20,9 @@
 	},
 	"tasks": {
 		"appGenerator": "deno run --allow-read --allow-write --allow-run appGenerator.ts",
-		"start": "deno run --allow-read --allow-env --allow-net --allow-sys --watch server.ts"
+		"dev": "deno run --allow-read --allow-env --allow-net --allow-sys --watch server.ts",
+		"start": "deno run --allow-read --allow-env --allow-net --allow-sys server.ts",
+		"simple": "deno run --allow-read --allow-env --allow-net --allow-sys simple.ts"
 	},
 	"imports": {
 	  "oak": "https://deno.land/x/oak@v16.0.0/mod.ts",

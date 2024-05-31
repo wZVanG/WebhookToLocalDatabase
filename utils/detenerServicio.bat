@@ -1,24 +1,23 @@
 @echo off
-setlocal
+:: Check for Administrator privileges
+openfiles >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Solicitud de privilegios de administrador...
+    powershell start-process "%~0" -verb runas
+    exit /b
+)
 
-REM Configuración del servicio
-set "ServiceName=ChangSincronizador"
-
-REM Verificar privilegios de administrador
-net session >nul 2>&1
-if %errorLevel% neq 0 (
-    echo Este script requiere privilegios de administrador. Por favor, ejecútelo como administrador.
+rem Function to check for errors and exit if any command fails
+:check_error
+if %errorlevel% neq 0 (
+    echo Error en el comando: %1
     pause
-    exit /b 1
+    exit /b %errorlevel%
 )
 
-REM Detener el servicio
-sc stop "%ServiceName%"
-if %errorLevel% neq 0 (
-    echo No se pudo detener el servicio "%ServiceName%". Puede que no esté en ejecución o no exista.
-) else (
-    echo Servicio "%ServiceName%" detenido exitosamente.
-)
+rem Stop the service
+nssm stop ChangSincronizador
+call :check_error "nssm stop ChangSincronizador"
 
+echo Servicio detenido exitosamente.
 pause
-endlocal

@@ -11,6 +11,8 @@ bin/*
 src/routes/include.all.ts
 
 _dist/
+_backups/
+_private/
 
 ngrok.yml
 ngrok.log
@@ -93,9 +95,6 @@ typings/
 
 # dotenv environment variables file
 .env
-
-# Executable files
-*.exe
 
 ### OSX ###
 *.DS_Store
