@@ -1,5 +1,6 @@
 import { Router } from "https://deno.land/x/oak@v16.0.0/mod.ts";
 import * as path from "https://deno.land/std@0.224.0/path/mod.ts";
+import logger from "logger";
 
 type HttpMethod = 'get' | 'post' | 'put' | 'delete';
 
@@ -8,7 +9,7 @@ const router = new Router();
 
 type ControllerType = (ctx: any) => void;
 
-console.log("CONTROLLERS_PATH: ", CONTROLLERS_PATH)
+logger.debug("CONTROLLERS_PATH: ", CONTROLLERS_PATH)
 
 const addRoute = (controllerName: string, key: string, controller: ControllerType) => {
 	let [method, route_str] = key.split(" ")
@@ -20,7 +21,7 @@ const addRoute = (controllerName: string, key: string, controller: ControllerTyp
 	const method_name_fn: HttpMethod = method.toLowerCase() as HttpMethod
 	router[method_name_fn](route_name, controller)
 
-	console.log(`Se agregó la ruta [${method}] ${route_name}`)
+	logger.debug(`Se agregó la ruta [${method}] ${route_name}`)
 }
 
 const importController = async (fileName: string) => {

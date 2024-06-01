@@ -1,12 +1,6 @@
 
-
-# Ignorar archivos de la carpeta controllers menos index.controller.js y woocommerce.controller.js
-src/controllers/*
-!src/controllers/index.controller.ts
-!src/controllers/woocommerce.controller.ts
-
-bin/*
-!bin/.keep
+src/logs/*
+!src/logs/.keep
 
 src/routes/include.all.ts
 
@@ -38,7 +32,6 @@ ngrok.log
 
 ### Node ###
 # Logs
-logs
 *.log
 npm-debug.log*
 yarn-debug.log*

@@ -20,8 +20,8 @@
 	},
 	"tasks": {
 		"appGenerator": "deno run --allow-read --allow-write --allow-run appGenerator.ts",
-		"dev": "deno run --allow-read --allow-env --allow-net --allow-sys --watch server.ts",
-		"start": "deno run --allow-read --allow-env --allow-net --allow-sys server.ts",
+		"dev": "deno run --allow-read --allow-write=./src/logs --allow-env --allow-net --allow-sys --no-check --watch server.ts",
+		"start": "deno run --allow-read --allow-write=./src/logs --allow-env --allow-net --allow-sys --no-check server.ts",
 		"simple": "deno run --allow-read --allow-env --allow-net --allow-sys simple.ts"
 	},
 	"imports": {
@@ -31,7 +31,9 @@
 	  "request": "https://deno.land/x/oak@v16.0.0/request.ts",
 	  "dotenv": "https://deno.land/x/dotenv@v3.2.2/load.ts",
 	  "indexRouter":"./src/routes/index.ts",
-	  "db": "./src/db.ts"
+	  "stdlog": "https://deno.land/std@0.224.0/log/mod.ts",
+	  "db": "./src/db.ts",
+	  "logger": "./src/logger.ts"
 	},
 	"exclude": [
 		"appGenerator.ts", "dist/", ".vscode/", "bin/", "ngrok/"

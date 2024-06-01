@@ -97,6 +97,8 @@ Aplicación Deno para escuchar Webhooks y ejecutar consultas en un servidor SQL 
 	#Usar `ngrok service uninstall` para volver a configurar ngrok.yml
 	```
 
+	Nota: La primera visita del dominio estático muestra una página de advertencia. Se puede desactivar enviando un request header: `ngrok-skip-browser-warning` con cualquier valor
+
 # Autor
 
 <table>

@@ -1,5 +1,6 @@
 import sql from "npm:mssql@10.0.1";
 import "dotenv";
+import logger from "logger";
 
 
 const config = {
@@ -20,9 +21,10 @@ let client: sql.ConnectionPool;
 const connectToDatabase = async () => {
 	try {
 		client = await sql.connect(config);
-		console.log(`\x1b[32mConexión de la base de datos exitosa 📦\x1b[0m`);
+		logger.info(`Conexión de la base de datos exitosa 📦`);
+
 	} catch (err) {
-		console.log(`\x1b[31mError conectando a la base de datos: ${err.message || err.toString()} 🚨\x1b[0m`);
+		logger.warn(`Error conectando a la base de datos: ${err.message || err.toString()} 🚨`)
 	}
 };
 
