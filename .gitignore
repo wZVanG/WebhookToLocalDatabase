@@ -1,7 +1,3 @@
-
-src/logs/*
-!src/logs/.keep
-
 src/routes/include.all.ts
 
 _dist/

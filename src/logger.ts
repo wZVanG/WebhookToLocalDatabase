@@ -2,24 +2,13 @@ import * as log from "stdlog";
 import { Response } from "response";
 import { Request } from "request";
 
-/*log.setup({
-	handlers: {
-		default: new log.ConsoleHandler("DEBUG", {
-			formatter: log.formatters.jsonFormatter,
-			useColors: true,
-		}),
-	},
-});*/
-
-//applicationLoggerHandler();
-
 const fileHandlerCallback = new log.FileHandler('ERROR', {
-	filename: './src/logs/server.log',
+	filename: './server.log',
 	formatter: rec => JSON.stringify({ r: rec.loggerName, t: rec.datetime, l: rec.levelName, d: rec.msg, a: rec.args })
 })
 
 log.setup({
-	//define handlers
+
 	handlers: {
 		console: new log.ConsoleHandler("DEBUG", {
 			formatter: (rec) => {
@@ -29,7 +18,6 @@ log.setup({
 		file: fileHandlerCallback
 	},
 
-	//assign handlers to loggers  
 	loggers: {
 		default: {
 			level: "DEBUG",

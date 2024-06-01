@@ -24,13 +24,14 @@ await ensureDir(distDirLastVersion);
 const controllersDir = "./src/controllers";
 
 
-// 2. Copia el contenido de la carpeta "src" a "dist"
+// 2. Copia el contenido de la carpeta "src/" (menos la carpeta logs) a "dist".
 console.log(`Copiando la carpeta src a la carpeta ${distName}...`);
 await copy(srcDir, distDirLastVersion + "/src", { overwrite: true });
 
 const controllerFiles = [];
 for await (const entry of walk(controllersDir)) {
-	if (entry.isFile) {
+	//Solo archivos que terminan en .controller.ts
+	if (entry.isFile && entry.name.endsWith(".controller.ts")) {
 		controllerFiles.push(entry.name);
 	}
 }
@@ -50,7 +51,7 @@ const includeParams = controllerFiles.map((file) => `--include src/controllers/$
 
 // 5. Ejecuta el comando ssh
 //--no-terminal --no-prompt --quiet
-const command = `deno compile --allow-read --allow-env --allow-net --allow-sys ${includeParams} --output ${distDirLastVersion}/ChangEcommerceSync.exe server.ts`;
+const command = `deno compile --allow-read --allow-write=./server.log --allow-env --allow-net --allow-sys ${includeParams} --output ${distDirLastVersion}/ChangEcommerceSync.exe server.ts`;
 //const command = `deno compile -A --output ${distDirLastVersion}/ChangEcommerceSync.exe simple.ts`;
 
 //Escribir en console Ejecutando comando de color verde

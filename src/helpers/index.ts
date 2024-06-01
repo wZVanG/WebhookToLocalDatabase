@@ -17,7 +17,7 @@ const escapeHtml = (unsafe: string) => {
 		.replace(/'/g, "&#039;");
 }
 
-export const jsonToSuperHtmlTable = (json: any, columns: Array) => {
+export const jsonToSuperHtmlTable = (json: any, columns: Array<any>) => {
 	let html = '<table border="1" style="border-collapse: collapse;">';
 
 	//create table header
@@ -28,7 +28,7 @@ export const jsonToSuperHtmlTable = (json: any, columns: Array) => {
 	html += '</tr></thead>';
 
 	//create table rows
-	json.forEach((row) => {
+	json.forEach((row: any) => {
 		html += `<tr>`;
 		let firstColumn = false;
 		columns.forEach((column) => {
