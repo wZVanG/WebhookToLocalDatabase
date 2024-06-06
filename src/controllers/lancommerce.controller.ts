@@ -3,7 +3,7 @@ import { Response } from "response";
 import { Request } from "request";
 import { errorRequestHandler } from "logger";
 import { constructParams, jsonToSuperHtmlTable } from "../helpers/index.ts";
-
+import CONSTANTS from "./woocommerce/constants.ts";
 
 export default {
 	"": async ({ response, request }: { response: Response, request: Request }) => {
@@ -26,18 +26,8 @@ export default {
 	"productos": async ({ response, request }: { response: Response, request: Request }) => {
 
 		try {
-			/*const sql = `
-			SELECT TOP 10 
-				PROD.CODITM AS CODITM,
-				PROD.DESITM AS DESITM,
-				PROD.CODEAN AS CODEAN,
-				STOCK.STOCK AS STOCK,
-				STOCK.CODTDA AS CODTDA
-			FROM TBPRODUC PROD
-			INNER JOIN TBPRODUCSTOCKS STOCK ON PROD.CODITM = STOCK.CODITM
-			WHERE STOCK.CODTDA = @codtda
-			`;*/
-			const sql = `SELECT TOP 100 * FROM TBPRODUC`;
+
+			const sql = `SELECT TOP 250 * FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_PRODUCTOS} ORDER BY CODITM DESC`;
 
 			const result = await dbClient.request()
 				.input('codtda', '01')
@@ -45,7 +35,7 @@ export default {
 
 			const items = result.recordset;
 
-			response.body = jsonToSuperHtmlTable(items, ['CODITM', 'DESITM', 'CODTDA', 'CODEAN', 'STOCK']);
+			response.body = jsonToSuperHtmlTable(items, ['CODITM', 'CODLIN', 'CODEAN', 'UNIDAD', 'DESITM', 'COSTOPRM', 'STOCK']);
 
 		} catch (err) {
 			errorRequestHandler(err.message, err, response, request);
@@ -53,25 +43,52 @@ export default {
 
 	},
 
-	//Proformas: TBDOCPRO (fecha, codtda, codclt, vventa, vigv, pventa, tasaigv, moneda, tcambio, observ, codpago, usuario, status, codcondi, fechapro, nombrefac, negrfac)
+	//Proformas: (fecha, codtda, codclt, vventa, vigv, pventa, tasaigv, moneda, tcambio, observ, codpago, usuario, status, codcondi, fechapro, nombrefac, negrfac)
 	//Proformas items: TBPROITM (codtda, coditm, unidad, cantidad, pventatot, cantegr, unidadegr, status, tasaigv, negr)
 	//Columnas siempre son en mayúsculas
 
 	"proformas": async ({ response, request }: { response: Response, request: Request }) => {
 
+		const params = Object.assign({ page: 1, per_page: 50 }, constructParams(request.url.searchParams));
+		params.per_page = Math.min(params.per_page, 1000);
+
 		try {
-			const sql = `SELECT TOP 100 * FROM TBDOCPRO ORDER BY FECHAPRO DESC`;
+			const sql = `SELECT TOP ${params.per_page} * FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_PROFORMA} WHERE CODTDA = @codtda AND CODCLT = @codclt ORDER BY FECHAPRO DESC `;
+
+			const result = await dbClient.request()
+				.input('codtda', '01')
+				.input('codclt', '10001')
+				.query(sql);
+
+			const items = result.recordset;
+
+			response.body = jsonToSuperHtmlTable(items, ['FECHA', 'CODTDA', 'CODCLT', 'VVENTA', 'VIGV', 'PVENTA', 'TASAIGV', 'MONEDA', 'TCAMBIO', 'OBSERV', 'CODPAGO', 'USUARIO', 'STATUS', 'CODCONDI', 'FECHAPRO', 'NOMBREFAC', 'NEGRFAC'], params);
+
+		} catch (err) {
+			errorRequestHandler(err.message, err, response, request);
+		}
+
+	},
+
+	//SELECT TOP 1 OFICIAL FROM LAN_COMMERCE_TABLENAME_TIPOCAMBIO ORDER BY FECHA DESC
+
+	"tipo_cambio": async ({ response, request }: { response: Response, request: Request }) => {
+
+		const params = Object.assign({ page: 1, per_page: 50 }, constructParams(request.url.searchParams));
+		params.per_page = Math.min(params.per_page, 1000);
+
+		try {
+			const sql = `SELECT TOP ${params.per_page} * FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_TIPOCAMBIO} ORDER BY FECHA DESC`;
 
 			const result = await dbClient.request()
 				.query(sql);
 
 			const items = result.recordset;
 
-			response.body = jsonToSuperHtmlTable(items, ['FECHA', 'CODTDA', 'CODCLT', 'VVENTA', 'VIGV', 'PVENTA', 'TASAIGV', 'MONEDA', 'TCAMBIO', 'OBSERV', 'CODPAGO', 'USUARIO', 'STATUS', 'CODCONDI', 'FECHAPRO', 'NOMBREFAC', 'NEGRFAC']);
+			response.body = jsonToSuperHtmlTable(items, ['FECHA', 'PARALELO', 'OFICIAL'], params);
 
 		} catch (err) {
 			errorRequestHandler(err.message, err, response, request);
 		}
-
-	},
+	}
 }

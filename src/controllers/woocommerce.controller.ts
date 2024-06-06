@@ -3,8 +3,11 @@ import { Response } from "response";
 import { Request } from "request";
 import { errorRequestHandler } from "logger";
 import Woo from "./woocommerce/index.ts";
+import processWooOrder from "./woocommerce/processWooOrder.ts";
+import mockOrder from "./woocommerce/mockOrder.ts";
 import { constructParams, jsonToSuperHtmlTable } from "../helpers/index.ts";
-
+import { Order } from './woocommerce/interfaces.ts';
+import CONSTANTS from "./woocommerce/constants.ts";
 
 export default {
 	"": async ({ response, request }: { response: Response, request: Request }) => {
@@ -34,7 +37,7 @@ export default {
 		try {
 			const items = await Woo.get("products", Object.assign({ page: 1, per_page: 10 }, constructParams(request.url.searchParams)));
 
-			response.body = jsonToSuperHtmlTable(items, ['id', 'name', 'date_created', 'sku', 'price', 'stock_quantity', 'categories']);
+			response.body = jsonToSuperHtmlTable(items, ['id', 'name', 'date_created', 'sku', 'short_description', 'price', 'stock_quantity', 'categories']);
 
 		} catch (err) {
 			errorRequestHandler(err.message, err, response, request);
@@ -55,12 +58,54 @@ export default {
 
 	},
 
+	"test_pedido": async ({ response, request }: { response: Response, request: Request }) => {
+
+		try {
+
+			const item: Order = mockOrder;
+
+			//processWooOrder([item], dbClient);
+			//Ejecutar la función processWooOrder con el item de tipo Order y el cliente de base de datos 
+			const result = await processWooOrder([item], dbClient);
+
+			response.body = result;
+
+			//response.body = jsonToSuperHtmlTable(items, ['id', 'number', 'status', 'date_created', 'date_modified', 'date_completed', 'customer_id', 'customer_ip_address', 'total', 'created_via', 'line_items']);
+
+		} catch (err) {
+			errorRequestHandler(err.message, err, response, request);
+		}
+
+	},
+
 	"pedidos": async ({ response, request }: { response: Response, request: Request }) => {
 
 		try {
 			const items = await Woo.get("orders", Object.assign({ page: 1, per_page: 10 }, constructParams(request.url.searchParams)))
 
-			response.body = jsonToSuperHtmlTable(items, ['id', 'number', 'status', 'date_created', 'date_modified', 'date_completed', 'customer_id', 'customer_ip_address', 'total', 'created_via', 'line_items']);
+			//Coleccionar ids de pedidos
+			const ids = items.map((item: any) => item.id);
+			//Consultar procesos de la base de datos (tabla: [actualizacion_web_local]) según los ids
+			const procesosConsulta = await await dbClient.request()
+				.input('tipo', CONSTANTS.TIPO_SINCRONIZACION.WEB_VENTA)
+				.query(`SELECT id_venta FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_SINCRONIZACION} WHERE tipo = @tipo AND id_venta IN (${ids.join(',')})`);
+
+			const idsProcesos = procesosConsulta.recordset.map((proceso: any) => proceso.id_venta);
+
+			//Agregar la propiedad sincronizado a cada pedido según la consulta de procesos
+			items.forEach((item: any) => {
+				item.sincronizado = idsProcesos.includes(item.id) ? '✅' : 'No';
+			});
+
+			//procesarWooPedidos(items, dbClient, 'nombre_de_tu_tabla');
+
+			response.body = jsonToSuperHtmlTable(items, ['id', 'sincronizado', 'status', 'date_created', 'date_modified', 'date_completed', 'customer_id', 'customer_ip_address', 'total', 'created_via', 'line_items'], {}, {
+				callbacks: {
+					trCreated: (row: any) => {
+						return row.sincronizado === 'No' ? '<tr">' : '<tr style="background-color: #33463c;">';
+					}
+				}
+			});
 
 		} catch (err) {
 			errorRequestHandler(err.message, err, response, request);
@@ -81,7 +126,18 @@ export default {
 
 	},
 
-	"nuevo_pedido": async ({ response, request }: { response: Response, request: Request }) => {
+	"POST nuevo_pedido_creado": async ({ response, request }: { response: Response, request: Request }) => {
+
+		const secret = Deno.env.get("WOOCOMMERCE_CONSUMER_SECRET");
+		const signature = response.headers.get('x-wc-webhook-signature');
+
+
+		response.body = {
+			ok: 1,
+			message: "(Prueba) Nuevo pedido sincronizado 🚀"
+		}
+
+		return;
 
 		try {
 
@@ -120,11 +176,11 @@ export default {
 
 	},
 
-	"nuevo_pedido_creado": async ({ response, request }: { response: Response, request: Request }) => {
+	"nuevo_pedido_creado_old": async ({ response, request }: { response: Response, request: Request }) => {
 		try {
 			const result = await dbClient.request()
 				.input('codtda', '21')
-				.query(`SELECT TOP 250 CODTDA, CODITM, STOCK FROM TBPRODUCSTOCKS WHERE CODTDA = @codtda`);
+				.query(`SELECT TOP 250 CODTDA, CODITM, STOCK FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_PRODUCTOS_STOCKS} WHERE CODTDA = @codtda`);
 
 			response.body = {
 				ok: 1,

@@ -17,7 +17,10 @@ const escapeHtml = (unsafe: string) => {
 		.replace(/'/g, "&#039;");
 }
 
-export const jsonToSuperHtmlTable = (json: any, columns: Array<any>) => {
+export const jsonToSuperHtmlTable = (json: any, columns: Array<any>, params?: any, options?: any) => {
+
+	if (params?.format === 'json') return json;
+
 	let html = '<table border="1" style="border-collapse: collapse;">';
 
 	//create table header
@@ -29,7 +32,7 @@ export const jsonToSuperHtmlTable = (json: any, columns: Array<any>) => {
 
 	//create table rows
 	json.forEach((row: any) => {
-		html += `<tr>`;
+		html += options?.callbacks?.trCreated ? options.callbacks.trCreated(row) : `<tr>`;
 		let firstColumn = false;
 		columns.forEach((column) => {
 			const onclick = !firstColumn ? ` onClick='console.log(${JSON.stringify(row)})'` : '';
@@ -57,8 +60,10 @@ export const jsonToSuperHtmlTable = (json: any, columns: Array<any>) => {
 	box-sizing: border-box;
 	font-family: Arial, sans-serif;
 	font-size: 10px;
-	background-color: #333;
 	color: white;
+	}
+	body, th{
+		background-color: #333;
 	}
 		table {
 			width: 100%;
