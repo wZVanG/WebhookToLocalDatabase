@@ -1,16 +1,17 @@
-import { ConnectionPool } from 'npm:mssql@10.0.1';
+import { ConnectionPool, Transaction } from 'npm:mssql@10.0.1';
 import { executeQuery, handleTransaction } from '../../helpers/db.helper.ts';
 import { Order, OrderItem } from './interfaces.ts';
 import logger from "logger";
 import CONSTANTS from "./constants.ts";
+type WooCommerceOrderStatusKey = keyof typeof CONSTANTS.WOO_COMMERCE_ORDER_STATUS;
 
 export default async (ventas: Order[], pool: ConnectionPool) => {
-	return await handleTransaction(pool, async (transaction) => {
+	return await handleTransaction(pool, async (transaction): Transaction => {
 
 		let totalRowsAffected = 0;
 
 		for (const order of ventas) {
-			const { id: orderId, date_created: dateCreated, date_completed: dateCompleted, status: orderStatus, billing, line_items, meta_data, shipping_lines, total } = order;
+			const { id: orderId, date_created: dateCreated, status: orderStatus, billing, line_items, meta_data, shipping_lines, total }: Order = order;
 
 			const tipoSincronizacion = CONSTANTS.TIPO_SINCRONIZACION.WEB_VENTA;
 
@@ -27,7 +28,6 @@ export default async (ventas: Order[], pool: ConnectionPool) => {
 			if (tipoCambioConsulta.recordset.length === 0) throw new Error('No se encontró el tipo de cambio más reciente');
 
 			const tcambio = tipoCambioConsulta.recordset[0].OFICIAL;
-
 
 			// Obtener el valor de la tasa de IGV. Tabla: TBDOCPRO (Obtener último registro de la tabla y obtener el valor de la columna TASAIGV)
 
@@ -128,13 +128,20 @@ export default async (ventas: Order[], pool: ConnectionPool) => {
 				if (consultaProductoLinea.rowsAffected[0] === 0) throw new Error(`Error al agregar producto de venta ECommerce: N° ${orderId} - SKU: ${sku} Cant: ${quantity} Pre: ${preciofinal} Desc: (${name})`);
 
 				// Actualizar stock
-				// await executeQuery(transaction, `UPDATE TBPRODUCSTOCKS SET EGRESOS = EGRESOS + @quantity, STOCK = STOCK - @quantity WHERE CODTDA = '01' AND CODITM = @sku`, { quantity, sku });
-				// await executeQuery(transaction, `UPDATE TBPRODUC SET EGRESOS = EGRESOS + @quantity, STOCK = STOCK - @quantity WHERE CODITM = @sku`, { quantity, sku });
+				// await executeQuery(transaction, `UPDATE PRODUCSTOCKS SET EGRESOS = EGRESOS + @quantity, STOCK = STOCK - @quantity WHERE CODTDA = '01' AND CODITM = @sku`, { quantity, sku });
+				// await executeQuery(transaction, `UPDATE PRODUC SET EGRESOS = EGRESOS + @quantity, STOCK = STOCK - @quantity WHERE CODITM = @sku`, { quantity, sku });
 			}
 
 			// Agregar registro de que ya se procesó la proforma
 			const idProforma = ultimoIdInsertado;
-			const ecommerceStatusCode = CONSTANTS.WOO_COMMERCE_ORDER_STATUS[orderStatus] || CONSTANTS.WOO_COMMERCE_ORDER_STATUS['pending'];
+
+			const isValidOrderStatus = (status: string): status is WooCommerceOrderStatusKey => {
+				return status in CONSTANTS.WOO_COMMERCE_ORDER_STATUS;
+			};
+
+			const orderStatusStr: WooCommerceOrderStatusKey = isValidOrderStatus(orderStatus) ? orderStatus : 'pending';
+
+			const ecommerceStatusCode = CONSTANTS.WOO_COMMERCE_ORDER_STATUS[orderStatusStr];
 			const agregaProceso = await executeQuery(transaction, `INSERT INTO ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_SINCRONIZACION} (id_venta, id_proforma, ecommerce_status, fecha_transaccion, fecha_actualizacion_stock, tipo) VALUES (@orderId, @idProforma, @ecommerceStatusCode, GETDATE(), null, @tipoSincronizacion)`, {
 				orderId, idProforma, ecommerceStatusCode, tipoSincronizacion
 			});

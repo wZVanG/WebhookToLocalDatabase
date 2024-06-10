@@ -8,6 +8,8 @@ import mockOrder from "./woocommerce/mockOrder.ts";
 import { constructParams, jsonToSuperHtmlTable } from "../helpers/index.ts";
 import { Order } from './woocommerce/interfaces.ts';
 import CONSTANTS from "./woocommerce/constants.ts";
+import processWebhook from "./woocommerce/processWebhook.ts";
+
 
 export default {
 	"": async ({ response, request }: { response: Response, request: Request }) => {
@@ -128,64 +130,69 @@ export default {
 
 	"POST nuevo_pedido_creado": async ({ response, request }: { response: Response, request: Request }) => {
 
-		const secret = Deno.env.get("WOOCOMMERCE_CONSUMER_SECRET");
-		const signature = response.headers.get('x-wc-webhook-signature');
-
-
-		response.body = {
-			ok: 1,
-			message: "(Prueba) Nuevo pedido sincronizado 🚀"
-		}
-
-		return;
+		let webhookResult;
 
 		try {
+			webhookResult = await processWebhook({ request });
 
-			throw new Error("No se puede crear un pedido en este momento");
-
-			const items = await Woo.post("orders", {
-				payment_method: "bacs",
-				payment_method_title: "Transferencia bancaria",
-				set_paid: true,
-				billing: {
-					first_name: "John",
-					last_name: "Doe",
-					address_1: "969 Market",
-					address_2: "",
-					city: "San Francisco",
-					state: "CA",
-					postcode: "94103",
-					country: "US",
-					email: ""
-				},
-				line_items: [
-					{
-						product_id: 93,
-						quantity: 2
-					}
-				],
-				customer_id: 1,
-				status: "processing",
-			});
-
-			response.body = items;
+			if (!webhookResult.success) {
+				response.body = webhookResult.body;
+				return;
+			}
 
 		} catch (err) {
-			errorRequestHandler(err.message, err, response, request);
+			return errorRequestHandler(err.message, err, response, request);
 		}
+
+		const { body, webhook } = webhookResult;
+
+		const Item: Order = body;
+
+		const result = await processWooOrder([Item], dbClient);
+
+		response.body = result;
+
 
 	},
 
 	"nuevo_pedido_creado_old": async ({ response, request }: { response: Response, request: Request }) => {
 		try {
-			const result = await dbClient.request()
-				.input('codtda', '21')
-				.query(`SELECT TOP 250 CODTDA, CODITM, STOCK FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_PRODUCTOS_STOCKS} WHERE CODTDA = @codtda`);
-
-			response.body = {
-				ok: 1,
-				items: result.recordset
-			};
+			/*return;
+			
+					try {
+			
+						throw new Error("No se puede crear un pedido en este momento");
+			
+						const items = await Woo.post("orders", {
+							payment_method: "bacs",
+							payment_method_title: "Transferencia bancaria",
+							set_paid: true,
+							billing: {
+								first_name: "John",
+								last_name: "Doe",
+								address_1: "969 Market",
+								address_2: "",
+								city: "San Francisco",
+								state: "CA",
+								postcode: "94103",
+								country: "US",
+								email: ""
+							},
+							line_items: [
+								{
+									product_id: 93,
+									quantity: 2
+								}
+							],
+							customer_id: 1,
+							status: "processing",
+						});
+			
+						response.body = items;
+			
+					} catch (err) {
+						errorRequestHandler(err.message, err, response, request);
+					}*/
 
 
 		} catch (err) {

@@ -1,4 +1,52 @@
-export default {
+interface SyncTypes {
+	SERVER_VENTA: number;
+	SERVER_COMPRA: number;
+	WEB_VENTA: number;
+	WEB_COMPRA: number;
+	WEB_PRODUCTO: number;
+	SERVER_PRODUCTO: number;
+	WEB_STOCK: number;
+	SERVER_STOCK: number;
+}
+
+interface WooCommerceOrderStatusKeys {
+	PENDING: string;
+	PROCESSING: string;
+	ON_HOLD: string;
+	COMPLETED: string;
+	CANCELLED: string;
+	REFUNDED: string;
+	FAILED: string;
+}
+
+interface WooCommerceOrderStatus {
+	pending: number;
+	processing: number;
+	'on-hold': number;
+	completed: number;
+	cancelled: number;
+	refunded: number;
+	failed: number;
+}
+
+interface TableNames {
+	LAN_COMMERCE_TABLENAME_SINCRONIZACION: string | undefined;
+	LAN_COMMERCE_TABLENAME_PROFORMA_ITEM: string | undefined;
+	LAN_COMMERCE_TABLENAME_PROFORMA: string | undefined;
+	LAN_COMMERCE_TABLENAME_TIPOCAMBIO: string | undefined;
+	LAN_COMMERCE_TABLENAME_PRODUCTOS_PRECIOS: string | undefined;
+	LAN_COMMERCE_TABLENAME_PRODUCTOS: string | undefined;
+	LAN_COMMERCE_TABLENAME_PRODUCTOS_STOCKS: string | undefined;
+}
+
+interface Config {
+	TIPO_SINCRONIZACION: SyncTypes;
+	WOO_COMMERCE_ORDER_STATUS_KEYS: WooCommerceOrderStatusKeys;
+	WOO_COMMERCE_ORDER_STATUS: WooCommerceOrderStatus;
+	TABLENAMES: TableNames;
+}
+
+const config: Config = {
 	TIPO_SINCRONIZACION: {
 		SERVER_VENTA: 1,
 		SERVER_COMPRA: 2,
@@ -37,3 +85,5 @@ export default {
 		LAN_COMMERCE_TABLENAME_PRODUCTOS_STOCKS: Deno.env.get('LAN_COMMERCE_TABLENAME_PRODUCTOS_STOCKS'),
 	}
 }
+
+export default config;
