@@ -6,13 +6,12 @@ import Woo from "./woocommerce/index.ts";
 import processWooOrder from "./woocommerce/processWooOrder.ts";
 import mockOrder from "./woocommerce/mockOrder.ts";
 import { constructParams, jsonToSuperHtmlTable } from "../helpers/index.ts";
-import { Order } from './woocommerce/interfaces.ts';
+import { Order, WooWebhook } from './woocommerce/interfaces.ts';
 import CONSTANTS from "./woocommerce/constants.ts";
 import processWebhook from "./woocommerce/processWebhook.ts";
 
-
 export default {
-	"": async ({ response, request }: { response: Response, request: Request }) => {
+	"": async ({ response }: { response: Response }) => {
 
 		//Verificar si la conexión a WooCommerce está activa
 
@@ -22,11 +21,11 @@ export default {
 			response.body = {
 				ok: 1,
 				message: "Conexión a WooCommerce activa 🚀",
-				webhooks: result.map((item: any) => {
-					return Object.keys(item).reduce((acc: any, key: string) => {
+				webhooks: result.map((item: WooWebhook) => {
+					return Object.keys(item).reduce((acc: WooWebhook, key: string) => {
 						if (['status', 'topic', 'resource', 'event', 'hooks', 'date_created', 'date_modified'].includes(key)) acc[key] = item[key];
 						return acc;
-					}, {} as any)
+					}, {} as WooWebhook)
 				})
 			};
 
@@ -66,9 +65,9 @@ export default {
 
 			const item: Order = mockOrder;
 
-			//processWooOrder([item], dbClient);
+			//processWooOrder([item], dbClient());
 			//Ejecutar la función processWooOrder con el item de tipo Order y el cliente de base de datos 
-			const result = await processWooOrder([item], dbClient);
+			const result = await processWooOrder([item], dbClient());
 
 			response.body = result;
 
@@ -86,24 +85,24 @@ export default {
 			const items = await Woo.get("orders", Object.assign({ page: 1, per_page: 10 }, constructParams(request.url.searchParams)))
 
 			//Coleccionar ids de pedidos
-			const ids = items.map((item: any) => item.id);
+			const ids = items.map((item: { id: number }) => item.id);
 			//Consultar procesos de la base de datos (tabla: [actualizacion_web_local]) según los ids
-			const procesosConsulta = await await dbClient.request()
+			const procesosConsulta = await await dbClient().request()
 				.input('tipo', CONSTANTS.TIPO_SINCRONIZACION.WEB_VENTA)
 				.query(`SELECT id_venta FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_SINCRONIZACION} WHERE tipo = @tipo AND id_venta IN (${ids.join(',')})`);
 
-			const idsProcesos = procesosConsulta.recordset.map((proceso: any) => proceso.id_venta);
+			const idsProcesos = procesosConsulta.recordset.map((proceso: { id_venta: number }) => proceso.id_venta);
 
 			//Agregar la propiedad sincronizado a cada pedido según la consulta de procesos
-			items.forEach((item: any) => {
+			items.forEach((item: { id: number, sincronizado: string }) => {
 				item.sincronizado = idsProcesos.includes(item.id) ? '✅' : 'No';
 			});
 
-			//procesarWooPedidos(items, dbClient, 'nombre_de_tu_tabla');
+			//procesarWooPedidos(items, dbClient(), 'nombre_de_tu_tabla');
 
 			response.body = jsonToSuperHtmlTable(items, ['id', 'sincronizado', 'status', 'date_created', 'date_modified', 'date_completed', 'customer_id', 'customer_ip_address', 'total', 'created_via', 'line_items'], {}, {
 				callbacks: {
-					trCreated: (row: any) => {
+					trCreated: (row: { sincronizado: string }) => {
 						return row.sincronizado === 'No' ? '<tr">' : '<tr style="background-color: #33463c;">';
 					}
 				}
@@ -144,62 +143,15 @@ export default {
 			return errorRequestHandler(err.message, err, response, request);
 		}
 
-		const { body, webhook } = webhookResult;
+		const { body } = webhookResult;
 
 		const Item: Order = body;
 
-		const result = await processWooOrder([Item], dbClient);
+		const result = await processWooOrder([Item], dbClient());
 
 		response.body = result;
 
 
-	},
-
-	"nuevo_pedido_creado_old": async ({ response, request }: { response: Response, request: Request }) => {
-		try {
-			/*return;
-			
-					try {
-			
-						throw new Error("No se puede crear un pedido en este momento");
-			
-						const items = await Woo.post("orders", {
-							payment_method: "bacs",
-							payment_method_title: "Transferencia bancaria",
-							set_paid: true,
-							billing: {
-								first_name: "John",
-								last_name: "Doe",
-								address_1: "969 Market",
-								address_2: "",
-								city: "San Francisco",
-								state: "CA",
-								postcode: "94103",
-								country: "US",
-								email: ""
-							},
-							line_items: [
-								{
-									product_id: 93,
-									quantity: 2
-								}
-							],
-							customer_id: 1,
-							status: "processing",
-						});
-			
-						response.body = items;
-			
-					} catch (err) {
-						errorRequestHandler(err.message, err, response, request);
-					}*/
-
-
-		} catch (err) {
-
-			errorRequestHandler(null, err, response, request);
-
-		}
 	}
 
 };

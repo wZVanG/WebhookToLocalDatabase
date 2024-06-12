@@ -6,7 +6,7 @@ export interface Order {
 	version: string
 	prices_include_tax: boolean
 	date_created: string
-	date_modified: string
+	date_modified: string | null
 	discount_total: string
 	discount_tax: string
 	shipping_total: string
@@ -25,21 +25,21 @@ export interface Order {
 	customer_user_agent: string
 	created_via: string
 	customer_note: string
-	date_completed: any
-	date_paid: any
+	date_completed: string | null
+	date_paid: string | null
 	cart_hash: string
 	number: string
 	meta_data: MetaDaum[]
 	line_items: OrderItem[]
-	tax_lines: any[]
+	tax_lines: number[]
 	shipping_lines: ShippingLine[]
-	fee_lines: any[]
-	coupon_lines: any[]
-	refunds: any[]
-	date_created_gmt: string
-	date_modified_gmt: string
-	date_completed_gmt: any
-	date_paid_gmt: any
+	fee_lines: number[]
+	coupon_lines: number[]
+	refunds: number[]
+	date_created_gmt: string | null
+	date_modified_gmt: string | null
+	date_completed_gmt: string | null
+	date_paid_gmt: string | null
 	currency_symbol: string
 	_links: Links
 }
@@ -94,11 +94,11 @@ export interface OrderItem {
 	subtotal_tax: string
 	total: string
 	total_tax: string
-	taxes: any[]
+	taxes: number[]
 	meta_data: MetaDaum2[]
 	sku: string
 	price: number
-	parent_name: any
+	parent_name: string | null
 }
 
 export interface MetaDaum2 {
@@ -116,7 +116,7 @@ export interface ShippingLine {
 	instance_id: string
 	total: string
 	total_tax: string
-	taxes: any[]
+	taxes: number[]
 	meta_data: MetaDaum3[]
 }
 
@@ -139,4 +139,15 @@ export interface Self {
 
 export interface Collection {
 	href: string
+}
+
+export interface WooWebhook {
+	status: string;
+	topic: string;
+	resource: string;
+	event: string;
+	hooks: string[];
+	date_created: string;
+	date_modified: string;
+	[key: string]: Array<string> | string; // Add index signature
 }

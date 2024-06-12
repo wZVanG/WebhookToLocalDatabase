@@ -31,11 +31,13 @@ export const errorRequestHandler = (customError: string | null, err: Error, resp
 	const errorType = err.name || 'Unknown';
 	const codeGenerated = Math.floor(Math.random() * 1000000);
 
-	const error_message = log.getLogger().error(`🚨 ${customError ? customError : 'Error inesperado'}: ${errorType} (${codeGenerated})`, Object.assign({ url: request?.url, code: codeGenerated }, errDetailed(err)));
+	let error_str = `🚨 ${customError ? customError : 'Error inesperado'}:`;
+	error_str = error_str.includes("reading 'request'") ? `No hay instancia de conexión a la base de datos: ${error_str}` : error_str;
+	error_str += ` ${errorType} (${codeGenerated})`
 
 	const obj = {
 		error: true,
-		message: error_message
+		message: log.getLogger().error(error_str, Object.assign({ url: request?.url, code: codeGenerated }, errDetailed(err)))
 	}
 
 	response.body = obj;

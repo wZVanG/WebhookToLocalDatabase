@@ -5,14 +5,14 @@ import indexRouter from "indexRouter";
 import logger, { fileHandler } from "logger";
 import { RateLimiter, MapStore } from "ratelimit";
 
-const rateLimit: any = RateLimiter({
+const rateLimit: Promise<any> = RateLimiter({
 	store: new MapStore(), // Using MapStore by default.
 	windowMs: 5000, // Window for the requests that can be made in miliseconds.
 	max: 20, // Max requests within the predefined window.
 	headers: true, // Default true, it will add the headers X-RateLimit-Limit, X-RateLimit-Remaining.
 	message: "Too many requests, please try again later.", // Default message if rate limit reached.
 	statusCode: 429, // Default status code if rate limit reached.
-	onRateLimit: async (context, next) => {
+	onRateLimit: (context) => {
 		logger.warn(`Suficientes solicitudes de ${context.request.ip} para ${context.request.url.pathname}`);
 	}
 });
