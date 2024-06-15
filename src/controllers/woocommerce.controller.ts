@@ -6,8 +6,8 @@ import Woo from "./woocommerce/index.ts";
 import processWooOrder from "./woocommerce/processWooOrder.ts";
 import mockOrder from "./woocommerce/mockOrder.ts";
 import { constructParams, jsonToSuperHtmlTable } from "../helpers/index.ts";
-import { Order, WooWebhook } from './woocommerce/interfaces.ts';
-import CONSTANTS from "./woocommerce/constants.ts";
+import { Order, WooWebhook } from '../interfaces.ts';
+import CONSTANTS from "../constants.ts";
 import processWebhook from "./woocommerce/processWebhook.ts";
 
 export default {

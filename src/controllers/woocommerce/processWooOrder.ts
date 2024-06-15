@@ -1,8 +1,8 @@
 import { ConnectionPool, Transaction } from 'npm:mssql@10.0.1';
 import { executeQuery, handleTransaction } from '../../helpers/db.helper.ts';
-import { Order, OrderItem } from './interfaces.ts';
+import { Order, OrderItem } from '../../interfaces.ts';
 import logger from "logger";
-import CONSTANTS from "./constants.ts";
+import CONSTANTS from "../../constants.ts";
 type WooCommerceOrderStatusKey = keyof typeof CONSTANTS.WOO_COMMERCE_ORDER_STATUS;
 
 export default async (ventas: Order[], pool: ConnectionPool) => {

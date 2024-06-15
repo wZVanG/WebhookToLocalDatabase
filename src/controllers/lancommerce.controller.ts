@@ -3,7 +3,7 @@ import { Response } from "response";
 import { Request } from "request";
 import { errorRequestHandler } from "logger";
 import { constructParams, jsonToSuperHtmlTable } from "../helpers/index.ts";
-import CONSTANTS from "./woocommerce/constants.ts";
+import CONSTANTS from "../constants.ts";
 
 export default {
 	"": async ({ response, request }: { response: Response, request: Request }) => {

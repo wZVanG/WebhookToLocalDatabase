@@ -151,3 +151,21 @@ export interface WooWebhook {
 	date_modified: string;
 	[key: string]: Array<string> | string; // Add index signature
 }
+
+export interface WooProduct {
+	id: number;
+	name: string;
+	sku: string;
+	stock_quantity: number;
+	stock_status: string;
+}
+
+export interface WooProductLog extends WooProduct {
+	codigo_tienda: string;
+}
+
+export interface LocalProductStock {
+	codigo_tienda: string;
+	codigo_item: string;
+	stock: number
+}

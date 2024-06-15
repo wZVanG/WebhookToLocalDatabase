@@ -4,6 +4,7 @@ import { oakCors } from "cors";
 import indexRouter from "indexRouter";
 import logger, { fileHandler } from "logger";
 import { RateLimiter, MapStore } from "ratelimit";
+import { initTasks } from "tasks";
 
 const rateLimit: Promise<any> = RateLimiter({
 	store: new MapStore(), // Using MapStore by default.
@@ -34,8 +35,7 @@ app.addEventListener("listen", ({ secure, hostname, port }) => {
 	const url = `${protocol}${hostname ?? "localhost"}:${port}`;
 	fileHandler.flush();
 	logger.info(`Listening on: ${url}`);
-
-
+	initTasks();
 });
 
 await app.listen({ port });

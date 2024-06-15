@@ -1,10 +1,10 @@
+import CONSTANTS from "./constants.ts";
 import sql from "npm:mssql@10.0.1";
-import "dotenv";
 import logger from "logger";
 
 const config = {
 	server: Deno.env.get("DATABASE_HOST") ?? "localhost",
-	port: Number(Deno.env.get("DATABASE_PORT")) ?? 1433,
+	port: Number(Deno.env.get("DATABASE_PORT")) ?? CONSTANTS.DATABASE_DEFAULT_PORT,
 	user: Deno.env.get("DATABASE_USER"),
 	password: Deno.env.get("DATABASE_PASSWORD"),
 	database: Deno.env.get("DATABASE_NAME"),

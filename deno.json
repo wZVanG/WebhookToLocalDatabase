@@ -1,11 +1,11 @@
 {
 	"lint": {
-	  "exclude": ["_models/*.ts"],
-	  "rules": {
-		"tags": ["recommended"],
-		"include": [],
-		"exclude": ["appGenerator.ts", "dist/", ".vscode/", "bin/", "ngrok/"]
-	  }
+		"exclude": ["_models/*.ts"],
+		"rules": {
+			"tags": ["recommended"],
+			"include": [],
+			"exclude": ["appGenerator.ts", "dist/", ".vscode/", "bin/", "ngrok/"]
+		}
 	},
 	"compilerOptions": {
 		"lib": ["deno.ns", "deno.unstable", "deno.window"],
@@ -15,29 +15,28 @@
 	"lock": false,
 	"unstable": ["webgpu"],
 	"test": {
-	  "include": ["*.test.ts"],
-	  "exclude": []
+		"include": ["*.test.ts"],
+		"exclude": []
 	},
 	"tasks": {
 		"appGenerator": "deno run --allow-read --allow-write --allow-run appGenerator.ts",
-		"dev": "deno run --allow-read --allow-write=./server.log --allow-env --allow-net --allow-sys --no-check --watch server.ts",
-		"start": "deno run --allow-read --allow-write=./server.log --allow-env --allow-net --allow-sys --no-check server.ts",
+		"dev": "deno run --allow-read --allow-write=./server.log --allow-env --allow-net --allow-sys --no-check --unstable-cron --watch server.ts",
+		"start": "deno run --allow-read --allow-write=./server.log --allow-env --allow-net --allow-sys --no-check --unstable-cron server.ts",
 		"simple": "deno run --allow-read --allow-env --allow-net --allow-sys simple.ts"
 	},
 	"imports": {
-	  "oak": "https://deno.land/x/oak@v16.0.0/mod.ts",
-	  "cors": "https://deno.land/x/cors@v1.2.2/mod.ts",
-	  "response": "https://deno.land/x/oak@v16.0.0/response.ts",
-	  "request": "https://deno.land/x/oak@v16.0.0/request.ts",
-	  "dotenv": "https://deno.land/x/dotenv@v3.2.2/load.ts",
-	  "indexRouter":"./src/routes/index.ts",
-	  "stdlog": "https://deno.land/std@0.224.0/log/mod.ts",
-	  "crypto": "https://deno.land/std@0.153.0/node/crypto.ts",
-	  "ratelimit": "https://deno.land/x/oak_rate_limit@v0.1.1/mod.ts",
-	  "db": "./src/db.ts",
-	  "logger": "./src/logger.ts"
+		"oak": "https://deno.land/x/oak@v16.0.0/mod.ts",
+		"cors": "https://deno.land/x/cors@v1.2.2/mod.ts",
+		"response": "https://deno.land/x/oak@v16.0.0/response.ts",
+		"request": "https://deno.land/x/oak@v16.0.0/request.ts",
+		"dotenv": "https://deno.land/x/dotenv@v3.2.2/load.ts",
+		"indexRouter": "./src/routes/index.ts",
+		"stdlog": "https://deno.land/std@0.224.0/log/mod.ts",
+		"crypto": "https://deno.land/std@0.153.0/node/crypto.ts",
+		"ratelimit": "https://deno.land/x/oak_rate_limit@v0.1.1/mod.ts",
+		"db": "./src/db.ts",
+		"tasks": "./src/tasks/index.ts",
+		"logger": "./src/logger.ts"
 	},
-	"exclude": [
-		"appGenerator.ts", "dist/", ".vscode/", "bin/", "ngrok/"
-	]
-  }
+	"exclude": ["appGenerator.ts", "dist/", ".vscode/", "bin/", "ngrok/"]
+}

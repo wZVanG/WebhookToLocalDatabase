@@ -8,10 +8,12 @@ import logger, { fileHandler } from "logger";
  * @param params - Parámetros opcionales para la consulta.
  * @returns Un `Promise` que se resuelve con el resultado de la consulta.
  */
-export const executeQuery = async (transaction: Transaction, query: string, params: any = {}): Promise<IResult<any>> => {
+export const executeQuery = async (transaction: Transaction, query: string, params: any = {}, types: any | undefined = {}): Promise<IResult<any>> => {
 	const request = transaction.request();
 	for (const param in params) {
-		request.input(param, params[param]);
+		console.log("types[param]", param, types[param], params[param]);
+		if (types[param]) request.input(param, types[param], params[param]);
+		else request.input(param, params[param]);
 	}
 	return await request.query(query);
 };
