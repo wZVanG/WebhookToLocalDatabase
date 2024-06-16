@@ -77,7 +77,7 @@ BEGIN
     IF (UPDATE(STOCK))
     BEGIN
         DECLARE @tipo_movimiento INT;
-        SET @tipo_movimiento = 8;
+        SET @tipo_movimiento = 8; -- SERVER_STOCK
 
         -- Insertar en tabla actualizacion_web_local para posterior sincronización
         INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, codigo_tienda, stock)
@@ -106,9 +106,34 @@ BEGIN
     SET NOCOUNT ON;
 
     DECLARE @tipo_movimiento INT;
-    SET @tipo_movimiento = 8;
+    SET @tipo_movimiento = 8; -- SERVER_STOCK
 
     -- Insertar en tabla actualizacion_web_local para posterior sincronización
+    INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, codigo_tienda, stock)
+    SELECT GETDATE(), @tipo_movimiento, CODITM, CODTDA, STOCK 
+    FROM inserted;
+END;
+GO
+
+IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'TriggerProducInsert')
+BEGIN
+	DROP TRIGGER TriggerProducInsert;
+END;
+
+GO
+
+CREATE TRIGGER TriggerProducInsert
+ON [dbo].[TBPRODUCSTOCKS]
+AFTER INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @tipo_movimiento INT;
+    SET @tipo_movimiento = 6; -- SERVER_PRODUCTO
+
+    -- Insertar en tabla actualizacion_web_local para posterior sincronización
+	-- CODITM, DESITM, PRECIO, STOCK(0)
     INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, codigo_tienda, stock)
     SELECT GETDATE(), @tipo_movimiento, CODITM, CODTDA, STOCK 
     FROM inserted;
