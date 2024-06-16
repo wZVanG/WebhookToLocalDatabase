@@ -65,10 +65,26 @@ const execute = await exec(command, { output: OutputMode.Capture });
 
 if (execute.status.success) {
 	console.log(execute.output);
-	console.log(`\x1b[32mCompilación exitosa 🚀: ${distDirLastVersion}\x1b[0m`);
-	console.log(`\x1b[32mModifica la configuración de tu base de datos en el archivo .env\x1b[0m`);
+	console.log(`\x1b[32mCompilación exitosa ChangEcommerceSync.exe 🚀: ${distDirLastVersion}\x1b[0m`);
 
 } else {
 	console.log(`\x1b[31mError al ejecutar el comando 🚨\x1b[0m`);
 	console.log(execute);
+}
+
+const command2 = "deno compile --allow-read --allow-write --allow-env --allow-net --allow-sys --no-check --output ${distDirLastVersion}/ActualizarStockMasivo.exe ./src/tasks/start.ts --task=updateFullStock";
+
+//Escribir en console Ejecutando comando de color verde
+console.log(`\x1b[32mEjecutando comando:\x1b[0m`);
+
+//Mostrar el comando en console de colo celeste
+console.log(`\x1b[36m${command2}\x1b[0m`);
+
+const execute2 = await exec(command2, { output: OutputMode.Capture });
+
+if (execute2.status.success) {
+	console.log(execute2.output);
+	console.log(`\x1b[32mCompilación exitosa ActualizarStockMasivo.exe 🚀: ${distDirLastVersion}\x1b[0m`);
+	console.log(`\x1b[32mModifica la configuración de tu base de datos en el archivo .env\x1b[0m`);
+
 }

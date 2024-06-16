@@ -35,7 +35,16 @@ app.addEventListener("listen", ({ secure, hostname, port }) => {
 	const url = `${protocol}${hostname ?? "localhost"}:${port}`;
 	fileHandler.flush();
 	logger.info(`Listening on: ${url}`);
-	initTasks();
+
+	initTasks([
+		{
+			"name": "taskProccessLocal",
+			"interval": 10000,
+			"autostart": true,
+			"requiredb": true
+		}
+	]);
+
 });
 
 await app.listen({ port });

@@ -1,3 +1,12 @@
+export const prompt = async (question: string): Promise<string> => {
+
+	const buf = new Uint8Array(1024); // Buffer para almacenar la entrada
+	await Deno.stdout.write(new TextEncoder().encode(question)); // Muestra la pregunta en la consola
+	const n = <number>await Deno.stdin.read(buf); // Lee la entrada del usuario
+	const answer = new TextDecoder().decode(buf.subarray(0, n)).trim(); // Decodifica y recorta la entrada
+	return answer;
+}
+
 export const constructParams = (searchParams: URLSearchParams) => {
 	const params: any = {};
 

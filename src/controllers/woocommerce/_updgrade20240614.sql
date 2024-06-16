@@ -4,6 +4,18 @@ BEGIN
 	DROP TRIGGER TriggerVentasInsert;
 END;
 
+-- Eliminar trigger obsoleto (TriggerActualizacionWebLocalInsert) si existe
+IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'TriggerActualizacionWebLocalInsert')
+BEGIN
+	DROP TRIGGER TriggerActualizacionWebLocalInsert;
+END;
+
+
+
+-- Eliminar contenido de la tabla actualizacion_web_local
+
+DELETE FROM actualizacion_web_local;
+
 GO
 
 IF NOT EXISTS (
@@ -61,14 +73,22 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @tipo_movimiento INT;
-    SET @tipo_movimiento = 8;
+    -- Verificar si hay cambios relevantes en la columna STOCK
+    IF (UPDATE(STOCK))
+    BEGIN
+        DECLARE @tipo_movimiento INT;
+        SET @tipo_movimiento = 8;
 
-    -- Insertar en tabla actualizacion_web_local para posterior sincronización
-    INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, codigo_tienda, stock)
-    SELECT GETDATE(), @tipo_movimiento, CODITM, CODTDA, STOCK 
-    FROM inserted;
+        -- Insertar en tabla actualizacion_web_local para posterior sincronización
+        INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, codigo_tienda, stock)
+        SELECT GETDATE(), @tipo_movimiento, i.CODITM, i.CODTDA, i.STOCK 
+        FROM inserted i
+        INNER JOIN deleted d ON i.CODITM = d.CODITM AND i.CODTDA = d.CODTDA
+        WHERE i.STOCK <> d.STOCK OR d.STOCK IS NULL;
+    END
 END;
+
+
 GO
 
 IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'TriggerProducStocksInsert')

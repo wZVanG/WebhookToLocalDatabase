@@ -11,7 +11,6 @@ import logger, { fileHandler } from "logger";
 export const executeQuery = async (transaction: Transaction, query: string, params: any = {}, types: any | undefined = {}): Promise<IResult<any>> => {
 	const request = transaction.request();
 	for (const param in params) {
-		console.log("types[param]", param, types[param], params[param]);
 		if (types[param]) request.input(param, types[param], params[param]);
 		else request.input(param, params[param]);
 	}

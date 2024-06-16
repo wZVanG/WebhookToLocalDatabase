@@ -7,7 +7,7 @@ _private/
 ngrok.yml
 ngrok.log
 
-
+src/tmp/*
 
 # Created by https://www.gitignore.io/api/osx,node,linux,windows
 

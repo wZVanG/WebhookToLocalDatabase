@@ -169,3 +169,24 @@ export interface LocalProductStock {
 	codigo_item: string;
 	stock: number
 }
+
+export interface LocalProductStockTda {
+	CODTDA: string;
+	CODITM: string;
+	STOCK: number
+}
+
+export interface Task {
+	name: string;
+	interval: number | null;
+	intervalFn?: number;
+	autostart: boolean;
+	requiredb: boolean;
+	stopiffinish?: boolean;
+	flags?: { [key: string]: string };
+}
+
+export interface TaskProccess {
+	callback: (arg0: Task) => Promise<() => void>;
+	started?: boolean;
+}

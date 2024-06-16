@@ -22,6 +22,7 @@
 		"appGenerator": "deno run --allow-read --allow-write --allow-run appGenerator.ts",
 		"dev": "deno run --allow-read --allow-write=./server.log --allow-env --allow-net --allow-sys --no-check --unstable-cron --watch server.ts",
 		"start": "deno run --allow-read --allow-write=./server.log --allow-env --allow-net --allow-sys --no-check --unstable-cron server.ts",
+		"task": "deno run --allow-read --allow-write --allow-env --allow-net --allow-sys --no-check ./src/tasks/start.ts",
 		"simple": "deno run --allow-read --allow-env --allow-net --allow-sys simple.ts"
 	},
 	"imports": {
@@ -30,6 +31,7 @@
 		"response": "https://deno.land/x/oak@v16.0.0/response.ts",
 		"request": "https://deno.land/x/oak@v16.0.0/request.ts",
 		"dotenv": "https://deno.land/x/dotenv@v3.2.2/load.ts",
+		"fsmod": "https://deno.land/std@0.224.0/fs/mod.ts",
 		"indexRouter": "./src/routes/index.ts",
 		"stdlog": "https://deno.land/std@0.224.0/log/mod.ts",
 		"crypto": "https://deno.land/std@0.153.0/node/crypto.ts",
