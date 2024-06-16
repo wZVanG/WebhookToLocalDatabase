@@ -38,7 +38,7 @@ for await (const entry of walk(controllersDir)) {
 
 //Copiar el archivo .env.example a la carpeta dist
 console.log(`Copiando archivo .env.example a la carpeta ${distName}...`);
-await copy(".env.example", distDirLastVersion + "/.env", { overwrite: true });
+await copy(".env.example", distDirLastVersion + "/.env.example", { overwrite: true });
 
 //Copiar todos los archivos de la carpeta utils a la carpeta dist sin tomar la carpeta
 console.log(`Copiando la carpeta utils a la carpeta ${distName}...`);

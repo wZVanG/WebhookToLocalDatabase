@@ -1,6 +1,6 @@
 import logger from "logger";
 ///import { Transaction, Record } from 'npm:mssql@10.0.1';
-import { prompt } from "../helpers/index.ts";
+import { prompt, pause } from "../helpers/index.ts";
 import { executeQuery } from '../helpers/db.helper.ts';
 import { WooProduct, WooProductLog, LocalProductStockTda, Task } from '../interfaces.ts';
 import Woo from "../controllers/woocommerce/index.ts";
@@ -62,7 +62,7 @@ export default async (task: Task) => {
 			if (!Object.keys(mapSkuAndId).length) {
 
 				try {
-					const csvFileMapSkuAndId = await Deno.readTextFile(task?.flags?.stockfile ? task.flags.stockfile : './chang_skus_ids_map.csv');
+					const csvFileMapSkuAndId = await Deno.readTextFile(task?.flags?.stockfile ? task.flags.stockfile : './skus_ids_map.csv');
 
 					//Cada línea del archivo tiene el formato: id,sku
 
@@ -119,10 +119,10 @@ export default async (task: Task) => {
 				logger.info(`Sincronizando productos: ${totalActualizados} / ${totalProductsToUpdate} (✅ ${((totalActualizados / totalProductsToUpdate) * 100).toFixed(2)}%)`);
 
 				if (!skus.length) {
-					logger.info("No hay productos para sincronizar");
+					logger.info("✅ Todos los productos han sido actualizados.");
 					clearInterval(task.intervalFn); //Detener la tarea
 					await Deno.remove(logFile); //Eliminar el archivo de log
-					(() => new Promise(() => { }))();
+					pause();
 					return true;
 				}
 

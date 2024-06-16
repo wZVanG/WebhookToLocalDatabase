@@ -1,3 +1,9 @@
+export const pause = () => {
+	const buffer = new Uint8Array(1024);
+	console.log("Presione Enter para salir...");
+	Deno.stdin.readSync(buffer);
+}
+
 export const prompt = async (question: string): Promise<string> => {
 
 	const buf = new Uint8Array(1024); // Buffer para almacenar la entrada

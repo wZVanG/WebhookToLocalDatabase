@@ -5,6 +5,7 @@ import indexRouter from "indexRouter";
 import logger, { fileHandler } from "logger";
 import { RateLimiter, MapStore } from "ratelimit";
 import { initTasks } from "tasks";
+import { pause } from "./src/helpers/index.ts";
 
 const rateLimit: Promise<any> = RateLimiter({
 	store: new MapStore(), // Using MapStore by default.
@@ -33,19 +34,29 @@ app.use(function () {
 app.addEventListener("listen", ({ secure, hostname, port }) => {
 	const protocol = secure ? "https://" : "http://";
 	const url = `${protocol}${hostname ?? "localhost"}:${port}`;
-	fileHandler.flush();
-	logger.info(`Listening on: ${url}`);
+
+	logger.info(`Server iniciado: ${url}`);
 
 	initTasks([
 		{
 			"name": "taskProccessLocal",
-			"interval": 10000,
+			"interval": Number(Deno.env.get("LAN_COMMERCE_SEGUNDOS_SINCRONIZACION") ?? 60) * 1000,
 			"autostart": true,
 			"requiredb": true
 		}
 	]);
 
+	fileHandler.flush();
+
 });
 
-await app.listen({ port });
-export default app
+try {
+	await app.listen({ port });
+} catch (error) {
+	logger.error(error instanceof Deno.errors.AddrInUse ? `El puerto ${port} para el servidor ya está en uso.` : `Fallo al iniciar el servidor ${error.message}`);
+	pause();
+} finally {
+	fileHandler.flush();
+}
+
+export default app;
