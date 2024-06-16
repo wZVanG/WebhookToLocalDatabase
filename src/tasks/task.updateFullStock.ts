@@ -3,6 +3,7 @@ import logger from "logger";
 import { prompt } from "../helpers/index.ts";
 import { executeQuery } from '../helpers/db.helper.ts';
 import { WooProduct, WooProductLog, LocalProductStockTda, Task } from '../interfaces.ts';
+import Woo from "../controllers/woocommerce/index.ts";
 import CONSTANTS from "../constants.ts";
 import dbClient from "db";
 
@@ -59,16 +60,26 @@ export default async (task: Task) => {
 			//Colección de sku => id
 
 			if (!Object.keys(mapSkuAndId).length) {
-				const csvFileMapSkuAndId = task?.flags?.stockfile ? await Deno.readTextFile(task.flags.stockfile) : null;
 
-				//Cada línea del archivo tiene el formato: id,sku
+				try {
+					const csvFileMapSkuAndId = await Deno.readTextFile(task?.flags?.stockfile ? task.flags.stockfile : './chang_skus_ids_map.csv');
 
-				if (csvFileMapSkuAndId) {
-					csvFileMapSkuAndId.split("\n").forEach((line: string) => {
-						const [id, sku] = line.split(",");
-						if (id && sku) mapSkuAndId[sku.trim()] = Number(id.trim());
-					});
+					//Cada línea del archivo tiene el formato: id,sku
+
+					if (csvFileMapSkuAndId) {
+						csvFileMapSkuAndId.split("\n").forEach((line: string) => {
+							const [id, sku] = line.split(",");
+							if (id && sku) mapSkuAndId[sku.trim()] = Number(id.trim());
+						});
+					} else {
+						logger.error("El archivo de mapeo de ids está vacío");
+					}
+
+				} catch (_) {
+					logger.error("No se encontró el archivo de mapeo de ids. Defínalo con el flag --stockfile=archivo.csv");
+					return false;
 				}
+
 			}
 
 			const totalProductsToUpdate = Object.keys(mapSkuAndId).length;
@@ -93,8 +104,12 @@ export default async (task: Task) => {
 
 				//Obtener SKU de los productos a sincronizar en la tienda local
 				//Solo selecionar los primeros 5 productos del logFileContent que no se hayan actualizado
+				const firstItems = Object.keys(logFileValues);
 
-				const skusSinActualizar = Object.keys(logFileValues).filter((sku: string) => !logFileValues[sku]);
+				//Obtener los productos de mayor SKU a menor
+				//firstItems.sort((a: string, b: string) => Number(b) - Number(a));
+
+				const skusSinActualizar = firstItems.filter((sku: string) => !logFileValues[sku]);
 
 				const skus: Array<string> = skusSinActualizar.slice(0, stockLimitToUpdate);
 
@@ -156,12 +171,27 @@ export default async (task: Task) => {
 					logger.warn(`Productos no encontrados en WooCommerce (${skus_not_found.length}): Se omitirán de la sincronización`, skus_not_found);
 				}
 
-				logger.debug(`Sincronizando (${skus_found.length}) productos...`);
-
 				if (!woocommerce_batch_arr.length) return false;
 
+				logger.debug(`Sincronizando (${skus_found.length}) productos...`);
+
+				//const result_batch = await Woo.post("products/batch", { update: woocommerce_batch_arr });
+				const result_batch = await Woo.postStream("products/batch", { update: woocommerce_batch_arr }, {}, (_) => {
+					Deno.stdout.write(new TextEncoder().encode(`-`)); //Indeterminate progress
+				});
+
+				Deno.stdout.write(new TextEncoder().encode(`\n`));
+
+				const result_updated = result_batch?.update;
+
+				if (!result_updated?.length) return true;
+
+				//if (woocommerce_batch_arr.length !== result_batch?.update.length) throw new Error("No se actualizó una cola de productos en WooCommerce");
+				const skus_updated = result_updated.map((item: WooProduct) => item.sku);
+
 				//Actualizar el archivo de log con los sku actualizados
-				for (const sku of skus_found) logFileValues[sku] = 1;
+				//for (const sku of skus_found) logFileValues[sku] = 1;
+				for (const sku of skus_updated) logFileValues[sku] = 1;
 
 				await Deno.writeTextFile(logFile, JSON.stringify(logFileValues));
 
@@ -170,24 +200,6 @@ export default async (task: Task) => {
 					return acc;
 				}, {}));
 
-				//console.log("woocommerce_batch_arr", woocommerce_batch_arr);
-
-				//Actualizar los productos en WooCommerce
-				/*const result_batch = await Woo.post("products/batch", { update: woocommerce_batch_arr });
-
-				if (!result_batch?.update?.length) return true;
-
-				if (woocommerce_batch_arr.length !== result_batch?.update.length) throw new Error("No se pudo actualizar todos los productos");
-
-				//Eliminar filas de sincronización de productos actualizados
-
-				const skus_escape = skus.map((sku: string) => `'${sku}'`).join(",");
-
-				const result_delete = await executeQuery(db, `DELETE FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_SINCRONIZACION} WHERE codigo_item IN (${skus_escape}) AND tipo IN (${tiposSincronizacion.join(",")})`);
-
-				if (result_delete?.rowsAffected[0] > 0) logger.info(`Productos actualizados: ${updated_items_to_log.length}`, updated_items_to_log);
-
-				return true;*/
 
 			} catch (error) {
 				logger.error(`Error al ejecutar tarea: taskProccessLocal: ${error.message ? error.message : error.toString()}`);

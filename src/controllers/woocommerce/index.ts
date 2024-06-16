@@ -80,6 +80,48 @@ class WooCommerce {
 		});
 	}
 
+	// Método post con Stream hacieno un callback por cada chunk enviando el progreso de la carga
+
+	async postStream(endpoint: string, data: any, params: { [key: string]: any } = {}, callback: (progress: number) => void): Promise<any> {
+		const url = this._buildUrl(endpoint, params);
+		const response = await fetch(url.toString(), {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(data)
+		});
+
+		const reader = response.body?.getReader();
+		if (!reader) throw new Error('No se pudo obtener el reader del body');
+
+		const contentLength = response.headers.get('Content-Length') || "5000";
+		if (!contentLength) throw new Error('No se pudo obtener el Content-Length');
+
+		let receivedLength = 0;
+		const chunks: Uint8Array[] = [];
+
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			if (!value) throw new Error('No se pudo obtener el valor del reader');
+
+			chunks.push(value);
+			receivedLength += value.length;
+			callback(receivedLength / parseInt(contentLength));
+		}
+
+		const chunksAll = new Uint8Array(receivedLength);
+		let position = 0;
+		for (const chunk of chunks) {
+			chunksAll.set(chunk, position);
+			position += chunk.length;
+		}
+
+		const result = new TextDecoder('utf-8').decode(chunksAll);
+		return JSON.parse(result);
+	}
+
 	// Método para realizar una petición PUT
 	async put(endpoint: string, data: any, params: { [key: string]: any } = {}): Promise<any> {
 		const url = this._buildUrl(endpoint, params);

@@ -1,8 +1,8 @@
 import logger from "logger";
 ///import { Transaction, Record } from 'npm:mssql@10.0.1';
 import { executeQuery } from '../helpers/db.helper.ts';
-import Woo from "../controllers/woocommerce/index.ts";
 import { WooProduct, WooProductLog, LocalProductStock } from '../interfaces.ts';
+import Woo from "../controllers/woocommerce/index.ts";
 import CONSTANTS from "../constants.ts";
 import dbClient from "db";
 

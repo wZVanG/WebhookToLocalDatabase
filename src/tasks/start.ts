@@ -6,8 +6,8 @@ const flags = parseArgs(Deno.args, {
 	string: ["task", "stockfile"],
 });
 
-//deno task task --task="updateFullStock(3000,1,1,1);" --stockfile="./_private/skusidstest.csv"
-//deno task task --task="taskProccessLocal(10000,1,1,1);"
+//deno task task --task="updateFullStock(3000,1,1);" --stockfile="./_private/skusidstest.csv"
+//deno task task --task="taskProccessLocal(10000,1,1);"
 
 const tasks = flags.task ? String(flags.task).split(";") : []
 
@@ -22,13 +22,12 @@ tasks.forEach((taskObj: string) => {
 
 	const taskParams = taskArgs ? taskArgs[2].split(",").map((param: string) => /^\d+$/.test(param) ? +param.trim() : param.trim()) : []
 
-	const [interval, autostart, requiredb, stopiffinish] = taskParams
+	const [interval, autostart, requiredb] = taskParams
 
 	const defaultOptions = {
 		"interval": interval ?? 10000,
 		"autostart": autostart ?? true,
 		"requiredb": requiredb ?? true,
-		"stopiffinish": stopiffinish ?? false,
 		"flags": flags
 	}
 

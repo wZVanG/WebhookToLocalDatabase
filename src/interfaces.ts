@@ -182,7 +182,6 @@ export interface Task {
 	intervalFn?: number;
 	autostart: boolean;
 	requiredb: boolean;
-	stopiffinish?: boolean;
 	flags?: { [key: string]: string };
 }
 

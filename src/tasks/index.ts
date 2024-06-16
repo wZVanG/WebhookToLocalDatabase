@@ -3,6 +3,7 @@ import { Task, TaskProccess } from '../interfaces.ts';
 import dbClient from "db";
 import taskProccessLocal from "./task.proccessLocal.ts";
 import taskUpdateFullStock from "./task.updateFullStock.ts";
+import { prompt } from "../helpers/index.ts";
 
 const ProjectTasks: { [key: string]: TaskProccess } = {
 	"taskProccessLocal": {
@@ -13,9 +14,46 @@ const ProjectTasks: { [key: string]: TaskProccess } = {
 	}
 }
 
-export const initTasks = (tasks: Array<Task>) => {
+export const initTasks = async (tasks: Array<Task>) => {
 
-	logger.info("Tareas programadas iniciadas 🚀")
+	if (!tasks.length) {
+
+		//Mostramos la lista de tareas disponibles al usuario para elegir
+
+		let i = 1;
+		const tareasPositions: { [key: string]: string } = {};
+		const options: Array<string> = [];
+
+		Object.keys(ProjectTasks).forEach((task: string) => {
+
+			if (task === "taskProccessLocal") return; //Ocultamos la tarea taskProccessLocal
+
+			options.push(`${i}. ${task}`);
+			tareasPositions[String(i++)] = task;
+		})
+
+		while (true) {
+			let taskSelected = "1";
+
+			if (options.length > 1) {
+				taskSelected = await prompt(`\nEscribe el número de la tarea a ejecutar:\n${options.join("\n")}\n`)
+				if (!tareasPositions[taskSelected]) continue;
+			}
+
+			tasks.push({
+				"name": tareasPositions[taskSelected],
+				"autostart": true,
+				"requiredb": true,
+				"interval": 10000,
+				"flags": {}
+			})
+			break;
+		}
+
+
+	}
+
+	//logger.info("Iniciando tareas 🚀");
 
 	tasks.forEach(async (task: Task) => {
 

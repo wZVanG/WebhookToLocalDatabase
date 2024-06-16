@@ -1,7 +1,7 @@
 import { ensureDir, copy } from "https://deno.land/std@0.224.0/fs/mod.ts";
 import { walk } from "https://deno.land/std@0.224.0/fs/walk.ts";
 import { OutputMode, exec } from "https://deno.land/x/exec@0.0.5/mod.ts";
-
+import AdmZip from "npm:adm-zip@0.5.14";
 
 const srcDir = "./src";
 const distName = "_dist";
@@ -72,7 +72,7 @@ if (execute.status.success) {
 	console.log(execute);
 }
 
-const command2 = "deno compile --allow-read --allow-write --allow-env --allow-net --allow-sys --no-check --output ${distDirLastVersion}/ActualizarStockMasivo.exe ./src/tasks/start.ts --task=updateFullStock";
+const command2 = `deno compile --allow-read --allow-write --allow-env --allow-net --allow-sys --no-check --output ${distDirLastVersion}/ActualizarStockMasivo.exe ./src/tasks/start.ts`;
 
 //Escribir en console Ejecutando comando de color verde
 console.log(`\x1b[32mEjecutando comando:\x1b[0m`);
@@ -86,5 +86,12 @@ if (execute2.status.success) {
 	console.log(execute2.output);
 	console.log(`\x1b[32mCompilación exitosa ActualizarStockMasivo.exe 🚀: ${distDirLastVersion}\x1b[0m`);
 	console.log(`\x1b[32mModifica la configuración de tu base de datos en el archivo .env\x1b[0m`);
-
 }
+
+//Comprimir el directorio dist con await compress()
+var zip = new AdmZip();
+console.log(`Comprimiendo el directorio ${distDirLastVersion}...`);
+zip.addLocalFolder(distDirLastVersion);
+zip.writeZip(`${distDirLastVersion}.zip`);
+
+//await compress(distDirLastVersion, `${distDirLastVersion}.zip`, { overwrite: true });
