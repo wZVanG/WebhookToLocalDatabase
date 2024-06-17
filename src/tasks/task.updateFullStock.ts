@@ -202,7 +202,7 @@ export default async (task: Task) => {
 
 
 			} catch (error) {
-				logger.error(`Error al ejecutar tarea: taskProccessLocal: ${error.message ? error.message : error.toString()}`);
+				logger.error(`Error al ejecutar tarea: taskUpdateFullStock: ${error.message ? error.message : error.toString()}`);
 			} finally {
 				proccesing = false;
 			}

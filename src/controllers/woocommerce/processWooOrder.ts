@@ -3,7 +3,6 @@ import { executeQuery, handleTransaction } from '../../helpers/db.helper.ts';
 import { Order, OrderItem } from '../../interfaces.ts';
 import logger from "logger";
 import CONSTANTS from "../../constants.ts";
-type WooCommerceOrderStatusKey = keyof typeof CONSTANTS.WOO_COMMERCE_ORDER_STATUS;
 
 export default async (ventas: Order[], pool: ConnectionPool) => {
 	return await handleTransaction(pool, async (transaction): Transaction => {
@@ -135,13 +134,7 @@ export default async (ventas: Order[], pool: ConnectionPool) => {
 			// Agregar registro de que ya se procesó la proforma
 			const idProforma = ultimoIdInsertado;
 
-			const isValidOrderStatus = (status: string): status is WooCommerceOrderStatusKey => {
-				return status in CONSTANTS.WOO_COMMERCE_ORDER_STATUS;
-			};
-
-			const orderStatusStr: WooCommerceOrderStatusKey = isValidOrderStatus(orderStatus) ? orderStatus : 'pending';
-
-			const ecommerceStatusCode = CONSTANTS.WOO_COMMERCE_ORDER_STATUS[orderStatusStr];
+			const ecommerceStatusCode = CONSTANTS.WOO_COMMERCE_ORDER_STATUS[orderStatus];
 			const agregaProceso = await executeQuery(transaction, `INSERT INTO ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_SINCRONIZACION} (id_venta, id_proforma, ecommerce_status, fecha_transaccion, fecha_actualizacion_stock, tipo) VALUES (@orderId, @idProforma, @ecommerceStatusCode, GETDATE(), null, @tipoSincronizacion)`, {
 				orderId, idProforma, ecommerceStatusCode, tipoSincronizacion
 			});

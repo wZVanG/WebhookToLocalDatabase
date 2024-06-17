@@ -20,7 +20,7 @@
 	},
 	"tasks": {
 		"appGenerator": "deno run --allow-read --allow-write --allow-run appGenerator.ts",
-		"dev": "deno run --allow-read --allow-write=./server.log --allow-env --allow-net --allow-sys --no-check --unstable-cron --watch server.ts",
+		"dev": "deno run --allow-read --allow-write=./server.log --allow-env --allow-net --allow-sys --no-check --unstable --unstable-cron --watch server.ts",
 		"start": "deno run --allow-read --allow-write=./server.log --allow-env --allow-net --allow-sys --no-check --unstable-cron server.ts",
 		"task": "deno run --allow-read --allow-write --allow-env --allow-net --allow-sys --no-check ./src/tasks/start.ts",
 		"simple": "deno run --allow-read --allow-env --allow-net --allow-sys simple.ts"

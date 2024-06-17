@@ -7,6 +7,7 @@
 -- SERVER_PRODUCTO: 6,
 -- WEB_STOCK: 7,
 -- SERVER_STOCK: 8
+-- SERVER_PRECIO: 9
 
 -- Eliminar trigger obsoleto (TriggerVentasInsert) si existe
 IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'TriggerVentasInsert')
@@ -18,6 +19,36 @@ END;
 IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'TriggerActualizacionWebLocalInsert')
 BEGIN
 	DROP TRIGGER TriggerActualizacionWebLocalInsert;
+END;
+
+GO
+
+-- Cambiar descripción de columna tipo
+
+IF EXISTS (
+    SELECT * 
+    FROM sys.extended_properties 
+    WHERE major_id = OBJECT_ID('actualizacion_web_local')
+      AND minor_id = COLUMNPROPERTY(OBJECT_ID('actualizacion_web_local'), 'tipo', 'ColumnId')
+)
+BEGIN
+    -- Actualizar la descripción existente para la columna 'tipo'
+    EXEC sp_updateextendedproperty 
+        @name = N'MS_Description', 
+        @value = N'1: SERVER_VENTA, 2: SERVER_COMPRA, 3: WEB_VENTA, 4: WEB_COMPRA, 5: WEB_PRODUCTO, 6: SERVER_PRODUCTO, 7: WEB_STOCK, 8: SERVER_STOCK, 9: SERVER_PRECIO',
+        @level0type = N'SCHEMA', @level0name = 'dbo', 
+        @level1type = N'TABLE',  @level1name = 'actualizacion_web_local', 
+        @level2type = N'COLUMN', @level2name = 'tipo';
+END
+ELSE
+BEGIN
+    -- Si no existe una descripción, agregar una nueva
+    EXEC sp_addextendedproperty 
+        @name = N'MS_Description', 
+        @value = N'1: SERVER_VENTA, 2: SERVER_COMPRA, 3: WEB_VENTA, 4: WEB_COMPRA, 5: WEB_PRODUCTO, 6: SERVER_PRODUCTO, 7: WEB_STOCK, 8: SERVER_STOCK, 9: SERVER_PRECIO', 
+        @level0type = N'SCHEMA', @level0name = 'dbo', 
+        @level1type = N'TABLE',  @level1name = 'actualizacion_web_local', 
+        @level2type = N'COLUMN', @level2name = 'tipo';
 END;
 
 -- Eliminar contenido de la tabla actualizacion_web_local
@@ -163,7 +194,7 @@ BEGIN
 	SET @tipo_movimiento = 6; -- SERVER_PRODUCTO
 	SELECT @infojson = 
 			CONCAT(
-				'{"fromtable":"TBPRODUC","descripcion":"', COALESCE(DESITM,''), '","precio":', COALESCE(CAST(COSTOACT AS NVARCHAR(MAX)),'null'), ',"unidad":"', COALESCE(UNIDAD,''), '","categoria":"', COALESCE(CODLIN, ''), '"}'
+				'{"descripcion":"', COALESCE(DESITM,''), '","precio":', COALESCE(CAST(COSTOACT AS NVARCHAR(MAX)),'null'), ',"unidad":"', COALESCE(UNIDAD,''), '","categoria":"', COALESCE(CODLIN, ''), '"}'
 			)
 		FROM inserted;
 		
@@ -198,7 +229,7 @@ BEGIN
 	SET @tipo_movimiento = 6; -- SERVER_PRODUCTO
 	SELECT @infojson = 
 			CONCAT(
-				'{"fromtable":"TBPRODUC","descripcion":"', COALESCE(DESITM, ''), '","unidad":"', COALESCE(UNIDAD, ''), '","categoria":"', COALESCE(CODLIN,''), '"}'
+				'{"descripcion":"', COALESCE(DESITM, ''), '","unidad":"', COALESCE(UNIDAD, ''), '","categoria":"', COALESCE(CODLIN,''), '"}'
 			)
 		FROM inserted;
 
@@ -230,10 +261,10 @@ BEGIN
 	DECLARE @tipo_movimiento INT;
 	DECLARE @infojson NVARCHAR(MAX);
 	
-	SET @tipo_movimiento = 6; -- SERVER_PRODUCTO
+	SET @tipo_movimiento = 9; -- SERVER_PRECIO
 	SELECT @infojson = 
 			CONCAT(
-				'{"fromtable":"TBPRODUCPRECIOS","precio":', COALESCE(CAST(PVENTA AS NVARCHAR(MAX)), 'null'), ',"unidad":"', COALESCE(UNIDADVTA, ''), '"}'
+				'{"precio":', COALESCE(CAST(PVENTA AS NVARCHAR(MAX)), 'null'), ',"unidad":"', COALESCE(UNIDADVTA, ''), '"}'
 			)
 		FROM inserted;
 
@@ -265,10 +296,10 @@ BEGIN
 	DECLARE @tipo_movimiento INT;
 	DECLARE @infojson NVARCHAR(MAX);
 	
-	SET @tipo_movimiento = 6; -- SERVER_PRODUCTO
+	SET @tipo_movimiento = 9; -- SERVER_PRECIO
 	SELECT @infojson = 
 			CONCAT(
-				'{"fromtable":"TBPRODUCPRECIOS","precio":', COALESCE(CAST(PVENTA AS NVARCHAR(MAX)), 'null'), ',"unidad":"', COALESCE(UNIDADVTA, ''), '"}'
+				'{"precio":', COALESCE(CAST(PVENTA AS NVARCHAR(MAX)), 'null'), ',"unidad":"', COALESCE(UNIDADVTA, ''), '"}'
 			)
 		FROM inserted;
 
@@ -280,5 +311,3 @@ BEGIN
 END;
 
 GO
-
--- Cambiar tipo de movimiento para los triggers de TBPRODUC y TBPRODUCPRECIOS, para usar la misma función de sincronización en el front-end

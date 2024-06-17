@@ -1,55 +1,10 @@
 import "dotenv";
 
-interface SyncTypes {
-	SERVER_VENTA: number;
-	SERVER_COMPRA: number;
-	WEB_VENTA: number;
-	WEB_COMPRA: number;
-	WEB_PRODUCTO: number;
-	SERVER_PRODUCTO: number;
-	WEB_STOCK: number;
-	SERVER_STOCK: number;
-}
-
-interface WooCommerceOrderStatusKeys {
-	PENDING: string;
-	PROCESSING: string;
-	ON_HOLD: string;
-	COMPLETED: string;
-	CANCELLED: string;
-	REFUNDED: string;
-	FAILED: string;
-}
-
-interface WooCommerceOrderStatus {
-	pending: number;
-	processing: number;
-	'on-hold': number;
-	completed: number;
-	cancelled: number;
-	refunded: number;
-	failed: number;
-}
-
-interface TableNames {
-	LAN_COMMERCE_TABLENAME_SINCRONIZACION: string | undefined;
-	LAN_COMMERCE_TABLENAME_PROFORMA_ITEM: string | undefined;
-	LAN_COMMERCE_TABLENAME_PROFORMA: string | undefined;
-	LAN_COMMERCE_TABLENAME_TIPOCAMBIO: string | undefined;
-	LAN_COMMERCE_TABLENAME_PRODUCTOS_PRECIOS: string | undefined;
-	LAN_COMMERCE_TABLENAME_PRODUCTOS: string | undefined;
-	LAN_COMMERCE_TABLENAME_PRODUCTOS_STOCKS: string | undefined;
-	LAN_COMMERCE_TABLENAME_VENTAS: string | undefined;
-	LAN_COMMERCE_TABLENAME_VENTAS_ITEMS: string | undefined;
-	LAN_COMMERCE_TABLENAME_COMPRAS: string | undefined;
-	LAN_COMMERCE_TABLENAME_COMPRAS_ITEMS: string | undefined;
-}
-
 interface Config {
-	TIPO_SINCRONIZACION: SyncTypes;
-	WOO_COMMERCE_ORDER_STATUS_KEYS: WooCommerceOrderStatusKeys;
-	WOO_COMMERCE_ORDER_STATUS: WooCommerceOrderStatus;
-	TABLENAMES: TableNames;
+	TIPO_SINCRONIZACION: { [key: string]: number };
+	WOO_COMMERCE_ORDER_STATUS_KEYS: { [key: string]: string };
+	WOO_COMMERCE_ORDER_STATUS: { [key: string]: number };
+	TABLENAMES: { [key: string]: string | undefined };
 	DATABASE_DEFAULT_PORT: number;
 }
 
@@ -62,7 +17,8 @@ const config: Config = {
 		WEB_PRODUCTO: 5,
 		SERVER_PRODUCTO: 6,
 		WEB_STOCK: 7,
-		SERVER_STOCK: 8
+		SERVER_STOCK: 8,
+		SERVER_PRECIO: 9
 	},
 	WOO_COMMERCE_ORDER_STATUS_KEYS: {
 		PENDING: 'pending',
