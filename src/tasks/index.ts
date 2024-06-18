@@ -73,7 +73,7 @@ export const initTasks = async (tasks: Array<Task>) => {
 			if (task.autostart) {
 				if (task.requiredb) {
 					if (dbClient()) callback()
-					else logger.warn(`La tarea ${task.name} requiere una conexión a la base de datos`)
+					else logger.warn(`La tarea ${task.name} requiere una conexión a la base de datos. Esperando conexión...`)
 				} else {
 					callback()
 				}

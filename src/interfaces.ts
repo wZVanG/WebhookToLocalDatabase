@@ -158,6 +158,8 @@ export interface WooProduct {
 	sku: string;
 	stock_quantity: number;
 	stock_status: string;
+	unidad: string;
+	regular_price: number;
 }
 
 export interface WooProductLog extends WooProduct {
@@ -167,7 +169,10 @@ export interface WooProductLog extends WooProduct {
 export interface LocalProductStock {
 	codigo_tienda: string;
 	codigo_item: string;
-	stock: number
+	stock: number;
+	tipo: number;
+	infojson: string;
+	crud: string;
 }
 
 export interface LocalProductStockTda {

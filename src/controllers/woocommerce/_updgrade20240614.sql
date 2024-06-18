@@ -107,6 +107,18 @@ BEGIN
     ADD infojson NVARCHAR(MAX);
 END;
 
+GO
+
+IF NOT EXISTS (
+    SELECT 1 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_NAME = 'actualizacion_web_local' 
+      AND COLUMN_NAME = 'crud'
+)
+BEGIN
+    ALTER TABLE actualizacion_web_local
+    ADD crud CHAR(1);
+END;
 
 GO
 
@@ -132,8 +144,8 @@ BEGIN
         SET @tipo_movimiento = 8; -- SERVER_STOCK
 
         -- Insertar en tabla actualizacion_web_local para posterior sincronización
-        INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, codigo_tienda, stock)
-        SELECT GETDATE(), @tipo_movimiento, i.CODITM, i.CODTDA, i.STOCK 
+        INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, codigo_tienda, stock, crud)
+        SELECT GETDATE(), @tipo_movimiento, i.CODITM, i.CODTDA, i.STOCK, 'U' 
         FROM inserted i
         INNER JOIN deleted d ON i.CODITM = d.CODITM AND i.CODTDA = d.CODTDA
         WHERE i.STOCK <> d.STOCK OR d.STOCK IS NULL;
@@ -161,8 +173,8 @@ BEGIN
     SET @tipo_movimiento = 8; -- SERVER_STOCK
 
     -- Insertar en tabla actualizacion_web_local para posterior sincronización
-    INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, codigo_tienda, stock)
-    SELECT GETDATE(), @tipo_movimiento, CODITM, CODTDA, STOCK 
+    INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, codigo_tienda, stock, crud)
+    SELECT GETDATE(), @tipo_movimiento, CODITM, CODTDA, STOCK, 'C' 
     FROM inserted;
 END;
 GO
@@ -199,8 +211,8 @@ BEGIN
 		FROM inserted;
 		
 	-- La columna infojson almacenará la descripción del producto, el precio, la unidad, y la categoría
-	INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson)
-	SELECT GETDATE(), @tipo_movimiento, CODITM, @infojson
+	INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson, crud)
+	SELECT GETDATE(), @tipo_movimiento, CODITM, @infojson, 'C'
 	FROM inserted;
 
 END;
@@ -234,8 +246,8 @@ BEGIN
 		FROM inserted;
 
 	-- La columna infojson almacenará la descripción del producto, el precio, la unidad, y la categoría
-	INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson)
-	SELECT GETDATE(), @tipo_movimiento, CODITM, @infojson
+	INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson, crud)
+	SELECT GETDATE(), @tipo_movimiento, CODITM, @infojson, 'U'
 	FROM inserted;
 
 END;
@@ -261,17 +273,22 @@ BEGIN
 	DECLARE @tipo_movimiento INT;
 	DECLARE @infojson NVARCHAR(MAX);
 	
-	SET @tipo_movimiento = 9; -- SERVER_PRECIO
-	SELECT @infojson = 
+	IF (SELECT UNIDADVTA FROM inserted) = 'UND'
+	BEGIN
+
+		SET @tipo_movimiento = 9; -- SERVER_PRECIO
+
+		SELECT @infojson = 
 			CONCAT(
 				'{"precio":', COALESCE(CAST(PVENTA AS NVARCHAR(MAX)), 'null'), ',"unidad":"', COALESCE(UNIDADVTA, ''), '"}'
 			)
 		FROM inserted;
 
-	-- La columna infojson almacenará el precio y la unidad
-	INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson)
-	SELECT GETDATE(), @tipo_movimiento, CODITM, @infojson
-	FROM inserted;
+		-- La columna infojson almacenará el precio y la unidad
+		INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson, crud)
+		SELECT GETDATE(), @tipo_movimiento, CODITM, @infojson, 'C'
+		FROM inserted;
+	END;
 
 END;
 
@@ -296,17 +313,24 @@ BEGIN
 	DECLARE @tipo_movimiento INT;
 	DECLARE @infojson NVARCHAR(MAX);
 	
-	SET @tipo_movimiento = 9; -- SERVER_PRECIO
-	SELECT @infojson = 
+	-- Solo almacenar si UNIDADVTA es UND
+
+	IF (SELECT UNIDADVTA FROM inserted) = 'UND'
+	BEGIN
+
+		SET @tipo_movimiento = 9; -- SERVER_PRECIO
+		SELECT @infojson = 
 			CONCAT(
 				'{"precio":', COALESCE(CAST(PVENTA AS NVARCHAR(MAX)), 'null'), ',"unidad":"', COALESCE(UNIDADVTA, ''), '"}'
 			)
 		FROM inserted;
 
-	-- La columna infojson almacenará el precio y la unidad
-	INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson)
-	SELECT GETDATE(), @tipo_movimiento, CODITM, @infojson
-	FROM inserted;
+		-- La columna infojson almacenará el precio y la unidad
+		INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson, crud)
+		SELECT GETDATE(), @tipo_movimiento, CODITM, @infojson, 'U'
+		FROM inserted;
+
+	END;
 
 END;
 
