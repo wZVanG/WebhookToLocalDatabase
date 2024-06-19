@@ -47,6 +47,14 @@ rem Set Start type
 %NSSM_PATH% set ChangSincronizador Start SERVICE_AUTO_START
 call :check_error "%NSSM_PATH% set ChangSincronizador Start SERVICE_AUTO_START"
 
+rem Set stdout and stderr log files
+%NSSM_PATH% set ChangSincronizador AppStdout C:\ChangSync\logs\server.log
+call :check_error "%NSSM_PATH% set ChangSincronizador AppStdout C:\ChangSync\logs\server.log"
+
+%NSSM_PATH% set ChangSincronizador AppStderr C:\ChangSync\logs\stderr.log
+call :check_error "%NSSM_PATH% set ChangSincronizador AppStderr C:\ChangSync\logs\stderr.log"
+
+
 echo Servicio ChangSincronizador instalado exitosamente.
 echo Iniciando servicio...
 

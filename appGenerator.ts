@@ -51,7 +51,7 @@ const includeParams = controllerFiles.map((file) => `--include src/controllers/$
 
 // 5. Ejecuta el comando ssh
 //--no-terminal --no-prompt --quiet
-const command = `deno compile --allow-read --allow-write=./server.log --allow-env --allow-net --allow-sys --unstable-cron ${includeParams} --output ${distDirLastVersion}/ChangEcommerceSync.exe server.ts`;
+const command = `deno compile --allow-read --allow-write=./logs/error.log --allow-env --allow-net --allow-sys ${includeParams} --output ${distDirLastVersion}/ChangEcommerceSync.exe server.ts`;
 //const command = `deno compile -A --output ${distDirLastVersion}/ChangEcommerceSync.exe simple.ts`;
 
 //Escribir en console Ejecutando comando de color verde

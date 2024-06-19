@@ -3,7 +3,7 @@ import { Response } from "response";
 import { Request } from "request";
 
 const fileHandlerCallback = new log.FileHandler('ERROR', {
-	filename: './server.log',
+	filename: './logs/error.log',
 	formatter: rec => JSON.stringify({ r: rec.loggerName, t: rec.datetime, l: rec.levelName, d: rec.msg, a: rec.args })
 })
 

@@ -94,6 +94,7 @@ BEGIN
     ADD stock NUMERIC(15, 4);
 END;
 
+
 GO
 
 IF NOT EXISTS (
@@ -118,6 +119,32 @@ IF NOT EXISTS (
 BEGIN
     ALTER TABLE actualizacion_web_local
     ADD crud CHAR(1);
+END;
+
+GO
+
+IF EXISTS (
+    SELECT * 
+    FROM sys.objects 
+    WHERE object_id = OBJECT_ID(N'dbo.EscapeJsonString') 
+    AND type = N'FN'
+)
+BEGIN
+    DROP FUNCTION dbo.EscapeJsonString;
+END;
+GO
+
+CREATE FUNCTION dbo.EscapeJsonString (@input NVARCHAR(MAX))
+RETURNS NVARCHAR(MAX)
+AS
+BEGIN
+    DECLARE @output NVARCHAR(MAX) = @input;
+    SET @output = REPLACE(@output, '\', '\\');
+    SET @output = REPLACE(@output, '"', '\"');
+    SET @output = REPLACE(@output, CHAR(10), '\n');
+    SET @output = REPLACE(@output, CHAR(13), '\r');
+    SET @output = REPLACE(@output, CHAR(9), '\t');
+    RETURN @output;
 END;
 
 GO
@@ -204,11 +231,15 @@ BEGIN
 	DECLARE @infojson NVARCHAR(MAX);
 	
 	SET @tipo_movimiento = 6; -- SERVER_PRODUCTO
-	SELECT @infojson = 
-			CONCAT(
-				'{"descripcion":"', COALESCE(DESITM,''), '","precio":', COALESCE(CAST(COSTOACT AS NVARCHAR(MAX)),'null'), ',"unidad":"', COALESCE(UNIDAD,''), '","categoria":"', COALESCE(CODLIN, ''), '"}'
-			)
-		FROM inserted;
+
+    SELECT @infojson = 
+        '{' +
+        '"descripcion":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(DESITM, '')))) + '",' +
+        '"unidad":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(UNIDAD, '')))) + '",' +
+        '"categoria":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(CODLIN, '')))) + '",' +
+		'"codean":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(CODEAN, '')))) + '"' +
+        '}'
+    FROM inserted;
 		
 	-- La columna infojson almacenará la descripción del producto, el precio, la unidad, y la categoría
 	INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson, crud)
@@ -233,23 +264,39 @@ ON [dbo].[TBPRODUC]
 AFTER UPDATE
 AS
 BEGIN
-	SET NOCOUNT ON;
+    SET NOCOUNT ON;
 
-	DECLARE @tipo_movimiento INT;
-	DECLARE @infojson NVARCHAR(MAX);
-	
-	SET @tipo_movimiento = 6; -- SERVER_PRODUCTO
-	SELECT @infojson = 
-			CONCAT(
-				'{"descripcion":"', COALESCE(DESITM, ''), '","unidad":"', COALESCE(UNIDAD, ''), '","categoria":"', COALESCE(CODLIN,''), '"}'
-			)
-		FROM inserted;
+    DECLARE @tipo_movimiento INT;
+    DECLARE @infojson NVARCHAR(MAX);
+    
+    SET @tipo_movimiento = 6; -- SERVER_PRODUCTO
 
-	-- La columna infojson almacenará la descripción del producto, el precio, la unidad, y la categoría
-	INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson, crud)
-	SELECT GETDATE(), @tipo_movimiento, CODITM, @infojson, 'U'
-	FROM inserted;
+    -- Insertar en actualizacion_web_local solo si alguna de las columnas ha cambiado
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        JOIN deleted d ON i.CODITM = d.CODITM
+        WHERE 
+            ISNULL(i.DESITM, '') <> ISNULL(d.DESITM, '') OR
+            ISNULL(i.UNIDAD, '') <> ISNULL(d.UNIDAD, '') OR
+            ISNULL(i.CODLIN, '') <> ISNULL(d.CODLIN, '') OR
+            ISNULL(i.CODEAN, '') <> ISNULL(d.CODEAN, '')
+    )
+    BEGIN
+        SELECT @infojson = 
+            '{' +
+            '"descripcion":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.DESITM, '')))) + '",' +
+            '"unidad":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.UNIDAD, '')))) + '",' +
+            '"categoria":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.CODLIN, '')))) + '",' +
+            '"codean":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.CODEAN, '')))) + '"' +
+            '}'
+        FROM inserted i;
 
+        -- La columna infojson almacenará la descripción del producto, el precio, la unidad, y la categoría
+        INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson, crud)
+        SELECT GETDATE(), @tipo_movimiento, i.CODITM, @infojson, 'U'
+        FROM inserted i;
+    END;
 END;
 
 GO
@@ -279,9 +326,10 @@ BEGIN
 		SET @tipo_movimiento = 9; -- SERVER_PRECIO
 
 		SELECT @infojson = 
-			CONCAT(
-				'{"precio":', COALESCE(CAST(PVENTA AS NVARCHAR(MAX)), 'null'), ',"unidad":"', COALESCE(UNIDADVTA, ''), '"}'
-			)
+        '{' +
+        '"precio":' + COALESCE(CAST(PVENTA AS NVARCHAR(MAX)), 'null') + ',' +
+        '"unidad":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(UNIDADVTA, '')))) + '"' +
+        '}'
 		FROM inserted;
 
 		-- La columna infojson almacenará el precio y la unidad
@@ -308,30 +356,71 @@ ON [dbo].[TBPRODUCPRECIOS]
 AFTER UPDATE
 AS
 BEGIN
-	SET NOCOUNT ON;
+    SET NOCOUNT ON;
 
-	DECLARE @tipo_movimiento INT;
-	DECLARE @infojson NVARCHAR(MAX);
-	
-	-- Solo almacenar si UNIDADVTA es UND
+    DECLARE @tipo_movimiento INT;
+    DECLARE @infojson NVARCHAR(MAX);
+    DECLARE @codigo_item INT;
+    DECLARE @unidad_principal NVARCHAR(50);
+    DECLARE @pventa DECIMAL(18,2);
+    DECLARE @unidadvta NVARCHAR(50);
+    DECLARE @tipounidad INT;
 
-	IF (SELECT UNIDADVTA FROM inserted) = 'UND'
-	BEGIN
+    SET @tipo_movimiento = 9; -- SERVER_PRECIO
 
-		SET @tipo_movimiento = 9; -- SERVER_PRECIO
-		SELECT @infojson = 
-			CONCAT(
-				'{"precio":', COALESCE(CAST(PVENTA AS NVARCHAR(MAX)), 'null'), ',"unidad":"', COALESCE(UNIDADVTA, ''), '"}'
-			)
-		FROM inserted;
+    DECLARE PriceCursor CURSOR FOR
+    SELECT i.CODITM, p.UNIDAD, i.PVENTA, i.UNIDADVTA, i.TIPOUNIDAD
+    FROM inserted i
+    JOIN TBPRODUC p ON i.CODITM = p.CODITM;
 
-		-- La columna infojson almacenará el precio y la unidad
-		INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson, crud)
-		SELECT GETDATE(), @tipo_movimiento, CODITM, @infojson, 'U'
-		FROM inserted;
+    OPEN PriceCursor;
 
-	END;
+    FETCH NEXT FROM PriceCursor INTO @codigo_item, @unidad_principal, @pventa, @unidadvta, @tipounidad;
 
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        DECLARE @precio_retail DECIMAL(18,2) = NULL;
+        DECLARE @unidad_retail NVARCHAR(50) = NULL;
+        DECLARE @precio_alt DECIMAL(18,2) = NULL;
+        DECLARE @unidad_alt NVARCHAR(50) = NULL;
+
+        -- Buscar los precios del producto
+        SELECT
+            @precio_retail = CASE WHEN TIPOUNIDAD = 1 THEN PVENTA ELSE @precio_retail END,
+            @unidad_retail = CASE WHEN TIPOUNIDAD = 1 THEN UNIDADVTA ELSE @unidad_retail END,
+            @precio_alt = CASE WHEN TIPOUNIDAD != 1 AND UNIDADVTA = @unidad_principal THEN PVENTA ELSE @precio_alt END,
+            @unidad_alt = CASE WHEN TIPOUNIDAD != 1 AND UNIDADVTA = @unidad_principal THEN UNIDADVTA ELSE @unidad_alt END
+        FROM TBPRODUCPRECIOS
+        WHERE CODITM = @codigo_item;
+
+        -- Determinar el precio y unidad a utilizar
+        IF @precio_retail IS NOT NULL
+        BEGIN
+            SET @pventa = @precio_retail;
+            SET @unidadvta = @unidad_retail;
+        END
+        ELSE IF @precio_alt IS NOT NULL
+        BEGIN
+            SET @pventa = @precio_alt;
+            SET @unidadvta = @unidad_alt;
+        END
+
+        SET @infojson = 
+        '{' +
+        '"precio":' + COALESCE(CAST(@pventa AS NVARCHAR(MAX)), 'null') + ',' +
+        '"unidad":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(@unidadvta, '')))) + '"' +
+        '}';
+
+        -- Insertar en la tabla de actualización
+        INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson, crud)
+        VALUES (GETDATE(), @tipo_movimiento, @codigo_item, @infojson, 'U');
+
+        FETCH NEXT FROM PriceCursor INTO @codigo_item, @unidad_principal, @pventa, @unidadvta, @tipounidad;
+    END
+
+    CLOSE PriceCursor;
+    DEALLOCATE PriceCursor;
 END;
+
 
 GO

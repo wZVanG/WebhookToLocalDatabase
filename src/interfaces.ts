@@ -152,14 +152,35 @@ export interface WooWebhook {
 	[key: string]: Array<string> | string; // Add index signature
 }
 
+export interface WooProductMetaData {
+	id: number;
+	key: string;
+	value: string;
+}
+
+export interface WooProductExtend {
+	descripcion?: string | null;
+	meta_data?: Array<WooProductMetaData> | null;
+	codlin?: string | null;
+	unidad?: string | null;
+	precio?: number | null;
+	codean?: string | null | undefined;
+	[key: string]: Array<WooProductMetaData> | string | null | number | undefined;
+}
+
 export interface WooProduct {
 	id: number;
 	name: string;
 	sku: string;
 	stock_quantity: number;
-	stock_status: string;
 	unidad: string;
 	regular_price: number;
+	status: string;
+	manage_stock: boolean;
+	short_description: string;
+	categories: Array<string>;
+	ean?: string;
+	meta_data: Array<WooProductMetaData>
 }
 
 export interface WooProductLog extends WooProduct {

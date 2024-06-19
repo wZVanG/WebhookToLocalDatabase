@@ -63,3 +63,12 @@ Aplicación Deno para escuchar Webhooks y ejecutar consultas en un servidor SQL 
     <td align="center"><a href="https://stackoverflow.com/users/1074519/walter-chapilliquen-wzvang"><img src="https://i.sstatic.net/aaKX6.jpg?s=256" width="100px;" alt="Walter Chapilliquen"/></a><br /><sub>💻<b>Walter Chapilliquen</b> (wZVanG)</sub><br/><a href="https://stackoverflow.com/users/1074519/walter-chapilliquen-wzvang">Perfil de StackOverflow</a></td>
   </tr>
 </table>
+
+1: Retail (Este)
+2: Mayorista
+En caso 2-2 (Jala el que manda el Stock)
+- Stock masive: Actualizar EAN, Actualizar Precios, Vaciar etiquetas
+
+- Permisos Tunnel
+- Descripciones de productos no escapan en SQL
+- Excel de productos sin foto
