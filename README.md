@@ -64,11 +64,14 @@ Aplicación Deno para escuchar Webhooks y ejecutar consultas en un servidor SQL 
   </tr>
 </table>
 
+-- Seguir haciendo pruebas de actualización de productos para ver si se está sincronizando el precio, y atributos si es necesario
+
 1: Retail (Este)
 2: Mayorista
 En caso 2-2 (Jala el que manda el Stock)
 - Stock masive: Actualizar EAN, Actualizar Precios, Vaciar etiquetas
-
+- Pasar updgrade20240614
+- Desactivar LAN_COMMERCE_EMPTY_SOMEFIELDS_SINCRONIZACION cuando ya se sincronizaron todos los productos
 - Permisos Tunnel
 - Descripciones de productos no escapan en SQL
 - Excel de productos sin foto

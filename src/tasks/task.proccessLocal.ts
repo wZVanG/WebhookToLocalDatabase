@@ -1,20 +1,10 @@
 import logger from "logger";
 import { executeQuery } from '../helpers/db.helper.ts';
-import { WooProduct, WooProductLog, LocalProductStock, WooProductExtend, WooProductMetaData } from '../interfaces.ts';
+import { WooProduct, WooProductLog, LocalProductStock, WooProductExtend } from '../interfaces.ts';
+import { productSetEan, productSetFields } from './lib.sync.ts';
 import Woo from "../controllers/woocommerce/index.ts";
 import CONSTANTS from "../constants.ts";
 import dbClient from "db";
-
-function productSetEan(product: WooProductExtend, ean: string): Array<WooProductMetaData> {
-	if (!product.meta_data) product.meta_data = [];
-	const ean_meta = product.meta_data.find((meta: WooProductMetaData) => meta.key === "_alg_ean");
-	if (ean_meta) {
-		ean_meta.value = ean;
-	} else {
-		product.meta_data.push({ id: 269384, key: "_alg_ean", value: ean });
-	}
-	return product.meta_data;
-}
 
 // deno-lint-ignore require-await
 export default async () => {
@@ -110,7 +100,7 @@ export default async () => {
 
 							//Si no hay suficiente información para insertar el producto, se busca en la tabla de productos
 							if (product_empty) {
-								const productQuery = `SELECT CODITM, DESITM, CODLIN, UNIDAD, CODEAN FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_PRODUCTOS} WHERE CODITM = '${item.codigo_item}'`;
+								const productQuery = `SELECT CODITM, DESITM, CODLIN, UNIDAD, CODEAN, STOCKMIN FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_PRODUCTOS} WHERE CODITM = '${item.codigo_item}'`;
 								const productResult = await executeQuery(db, productQuery);
 								if (productResult.recordset.length) {
 									const producto = productResult.recordset[0];
@@ -119,6 +109,7 @@ export default async () => {
 									item_extended.unidad = String(producto.UNIDAD || "").trim();
 									item_extended.precio = parseFloat(producto.COSTOACT || 0);
 									item_extended.codean = String(producto.CODEAN || "").trim();
+									item_extended.stockmin = parseFloat(producto.STOCKMIN || 0) ? parseFloat(producto.STOCKMIN || 0) : null;
 								}
 
 								// Obtener el precio correcto desde TBPRODUCPRECIOS
@@ -140,15 +131,26 @@ export default async () => {
 								}
 							}
 
-							new_woo_item.name = item_extended.descripcion || `Producto ${item.codigo_item}`;
+							/*new_woo_item.name = item_extended.descripcion || `Producto ${item.codigo_item}`;
 							new_woo_item.sku = item.codigo_item;
 							new_woo_item.stock_quantity = 0;
 							new_woo_item.regular_price = parseFloat(String(item_extended.precio || 0));
 							new_woo_item.status = "publish";
 							new_woo_item.manage_stock = true;
-							new_woo_item.short_description = item_extended.unidad || "";
+							new_woo_item.short_description = item_extended.unidad || "";*/
 
-							if (item_extended.codean) new_woo_item.meta_data = productSetEan(item_extended, String(item_extended.codean || ""));
+							Object.assign(new_woo_item, productSetFields({
+								name: item_extended.descripcion,
+								sku: item.codigo_item,
+								stock_quantity: 0,
+								regular_price: item_extended.precio,
+								status: "publish",
+								manage_stock: true,
+								unidad: item_extended.unidad,
+								codean: item_extended.codean,
+								stockmin: item_extended.stockmin
+							}));
+
 
 						}
 
@@ -164,6 +166,9 @@ export default async () => {
 
 							if (item_extended.descripcion && item_extended.descripcion !== woo_item_found.name) new_woo_item.name = item_extended.descripcion;
 							if (item_extended.codean !== woo_item_found.ean) new_woo_item.meta_data = productSetEan(item_extended, String(item_extended.codean || ""));
+							if (item_extended.unidad !== woo_item_found.short_description) new_woo_item.short_description = String(item_extended.unidad || "");
+							//if (item_extended.codlin) new_woo_item.categories = [String(item_extended.codlin)];
+							if (item_extended.stockmin !== woo_item_found.low_stock_amount) new_woo_item.low_stock_amount = Number(item_extended.stockmin) || null;
 
 							//new_woo_item.categories = ["DESCARTABLE"] // H E R E - Categorías pendiente
 

@@ -6,7 +6,7 @@ const flags = parseArgs(Deno.args, {
 	string: ["task", "stockfile"],
 });
 
-//deno task task --task="updateFullStock(3000,1,1);" --stockfile="./_private/skusidstest.csv"
+//deno task task --task="updateFullStock(3000,1,1);"
 //deno task task --task="taskProccessLocal(10000,1,1);"
 
 const tasks = flags.task ? String(flags.task).split(";") : []

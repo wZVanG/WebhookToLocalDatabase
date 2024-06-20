@@ -7,7 +7,7 @@ export const pause = () => {
 export const prompt = async (question: string): Promise<string> => {
 
 	const buf = new Uint8Array(1024); // Buffer para almacenar la entrada
-	await Deno.stdout.write(new TextEncoder().encode(question)); // Muestra la pregunta en la consola
+	await Deno.stdout.write(new TextEncoder().encode(question + "\n")); // Muestra la pregunta en la consola
 	const n = <number>await Deno.stdin.read(buf); // Lee la entrada del usuario
 	const answer = new TextDecoder().decode(buf.subarray(0, n)).trim(); // Decodifica y recorta la entrada
 	return answer;
@@ -21,7 +21,15 @@ export const constructParams = (searchParams: URLSearchParams) => {
 	}
 
 	return params;
-};
+}
+
+export const today = () => {
+	const date = new Date();
+	const day = date.getDate().toString().padStart(2, '0');
+	const month = (date.getMonth() + 1).toString().padStart(2, '0');
+	const year = date.getFullYear();
+	return `${year}_${month}_${day}`;
+}
 
 const escapeHtml = (unsafe: string) => {
 	return unsafe

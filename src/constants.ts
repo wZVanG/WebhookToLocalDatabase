@@ -6,6 +6,7 @@ interface Config {
 	WOO_COMMERCE_ORDER_STATUS: { [key: string]: number };
 	TABLENAMES: { [key: string]: string | undefined };
 	DATABASE_DEFAULT_PORT: number;
+	PRODUCT_COLUMNS_TO_SYNC: string[];
 }
 
 const config: Config = {
@@ -51,6 +52,15 @@ const config: Config = {
 		LAN_COMMERCE_TABLENAME_COMPRAS: Deno.env.get('LAN_COMMERCE_TABLENAME_COMPRAS'),
 		LAN_COMMERCE_TABLENAME_COMPRAS_ITEMS: Deno.env.get('LAN_COMMERCE_TABLENAME_COMPRAS_ITEMS'),
 	},
+
+	PRODUCT_COLUMNS_TO_SYNC: [
+		"id",
+		"name",
+		"sku",
+		"stock_quantity",
+		"regular_price",
+		"ean"
+	],
 
 	DATABASE_DEFAULT_PORT: 1433,
 }

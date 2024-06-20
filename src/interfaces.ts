@@ -179,12 +179,13 @@ export interface WooProduct {
 	manage_stock: boolean;
 	short_description: string;
 	categories: Array<string>;
+	low_stock_amount?: number | null;
 	ean?: string;
-	meta_data: Array<WooProductMetaData>
+	meta_data?: Array<WooProductMetaData>;
 }
 
 export interface WooProductLog extends WooProduct {
-	codigo_tienda: string;
+	codigo_tienda?: string;
 }
 
 export interface LocalProductStock {
@@ -200,6 +201,11 @@ export interface LocalProductStockTda {
 	CODTDA: string;
 	CODITM: string;
 	STOCK: number
+}
+
+export interface LocalProductPrice {
+	CODITM: string,
+	PRECIOFINAL: number
 }
 
 export interface Task {
