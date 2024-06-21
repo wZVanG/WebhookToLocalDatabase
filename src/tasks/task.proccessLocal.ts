@@ -119,9 +119,10 @@ export default async () => {
 									WHERE CODITM = @coditm
 									ORDER BY 
 										CASE 
-											WHEN TIPOUNIDAD = 1 THEN 0 
-											WHEN UNIDADVTA = @unidadvta THEN 1 
-											ELSE 2 
+											WHEN TIPOUNIDAD = 1 AND UNIDADVTA = @unidadvta THEN 0
+											WHEN TIPOUNIDAD = 1 THEN 1 
+											WHEN UNIDADVTA = @unidadvta THEN 2 
+											ELSE 3 
 										END
 								`;
 								const priceResult = await executeQuery(db, priceQuery, { coditm: item.codigo_item, unidadvta: item_extended.unidad });

@@ -341,30 +341,28 @@ BEGIN
 
     WHILE @@FETCH_STATUS = 0
     BEGIN
-        DECLARE @precio_retail DECIMAL(18,2) = NULL;
-        DECLARE @unidad_retail NVARCHAR(50) = NULL;
-        DECLARE @precio_alt DECIMAL(18,2) = NULL;
-        DECLARE @unidad_alt NVARCHAR(50) = NULL;
+        DECLARE @precio_final DECIMAL(18,2) = NULL;
+        DECLARE @unidad_final NVARCHAR(50) = NULL;
 
-        -- Buscar los precios del producto
-        SELECT
-            @precio_retail = CASE WHEN TIPOUNIDAD = 1 THEN PVENTA ELSE @precio_retail END,
-            @unidad_retail = CASE WHEN TIPOUNIDAD = 1 THEN UNIDADVTA ELSE @unidad_retail END,
-            @precio_alt = CASE WHEN TIPOUNIDAD != 1 AND UNIDADVTA = @unidad_principal THEN PVENTA ELSE @precio_alt END,
-            @unidad_alt = CASE WHEN TIPOUNIDAD != 1 AND UNIDADVTA = @unidad_principal THEN UNIDADVTA ELSE @unidad_alt END
+        -- Buscar el precio y la unidad de venta según la lógica de prioridad
+        SELECT TOP 1 
+            @precio_final = PVENTA,
+            @unidad_final = UNIDADVTA
         FROM TBPRODUCPRECIOS
-        WHERE CODITM = @codigo_item;
+        WHERE CODITM = @codigo_item
+        ORDER BY 
+            CASE 
+                WHEN TIPOUNIDAD = 1 AND UNIDADVTA = @unidad_principal THEN 0
+                WHEN TIPOUNIDAD = 1 THEN 1
+                WHEN TIPOUNIDAD = 2 AND UNIDADVTA = @unidad_principal THEN 2
+                ELSE 3 
+            END;
 
-        -- Determinar el precio y unidad a utilizar
-        IF @precio_retail IS NOT NULL
+        -- Asignar el precio y la unidad final si se encontró un resultado
+        IF @precio_final IS NOT NULL
         BEGIN
-            SET @pventa = @precio_retail;
-            SET @unidadvta = @unidad_retail;
-        END
-        ELSE IF @precio_alt IS NOT NULL
-        BEGIN
-            SET @pventa = @precio_alt;
-            SET @unidadvta = @unidad_alt;
+            SET @pventa = @precio_final;
+            SET @unidadvta = @unidad_final;
         END
 
         SET @infojson = 
@@ -423,30 +421,28 @@ BEGIN
 
     WHILE @@FETCH_STATUS = 0
     BEGIN
-        DECLARE @precio_retail DECIMAL(18,2) = NULL;
-        DECLARE @unidad_retail NVARCHAR(50) = NULL;
-        DECLARE @precio_alt DECIMAL(18,2) = NULL;
-        DECLARE @unidad_alt NVARCHAR(50) = NULL;
+        DECLARE @precio_final DECIMAL(18,2) = NULL;
+        DECLARE @unidad_final NVARCHAR(50) = NULL;
 
-        -- Buscar los precios del producto
-        SELECT
-            @precio_retail = CASE WHEN TIPOUNIDAD = 1 THEN PVENTA ELSE @precio_retail END,
-            @unidad_retail = CASE WHEN TIPOUNIDAD = 1 THEN UNIDADVTA ELSE @unidad_retail END,
-            @precio_alt = CASE WHEN TIPOUNIDAD != 1 AND UNIDADVTA = @unidad_principal THEN PVENTA ELSE @precio_alt END,
-            @unidad_alt = CASE WHEN TIPOUNIDAD != 1 AND UNIDADVTA = @unidad_principal THEN UNIDADVTA ELSE @unidad_alt END
+        -- Buscar el precio y la unidad de venta según la lógica de prioridad
+        SELECT TOP 1 
+            @precio_final = PVENTA,
+            @unidad_final = UNIDADVTA
         FROM TBPRODUCPRECIOS
-        WHERE CODITM = @codigo_item;
+        WHERE CODITM = @codigo_item
+        ORDER BY 
+            CASE 
+                WHEN TIPOUNIDAD = 1 AND UNIDADVTA = @unidad_principal THEN 0
+                WHEN TIPOUNIDAD = 1 THEN 1
+                WHEN TIPOUNIDAD = 2 AND UNIDADVTA = @unidad_principal THEN 2
+                ELSE 3 
+            END;
 
-        -- Determinar el precio y unidad a utilizar
-        IF @precio_retail IS NOT NULL
+        -- Asignar el precio y la unidad final si se encontró un resultado
+        IF @precio_final IS NOT NULL
         BEGIN
-            SET @pventa = @precio_retail;
-            SET @unidadvta = @unidad_retail;
-        END
-        ELSE IF @precio_alt IS NOT NULL
-        BEGIN
-            SET @pventa = @precio_alt;
-            SET @unidadvta = @unidad_alt;
+            SET @pventa = @precio_final;
+            SET @unidadvta = @unidad_final;
         END
 
         SET @infojson = 
@@ -465,6 +461,5 @@ BEGIN
     CLOSE PriceCursor;
     DEALLOCATE PriceCursor;
 END;
-
 
 GO

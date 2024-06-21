@@ -72,6 +72,9 @@ En caso 2-2 (Jala el que manda el Stock)
 - Stock masive: Actualizar EAN, Actualizar Precios, Vaciar etiquetas
 - Pasar updgrade20240614
 - Desactivar LAN_COMMERCE_EMPTY_SOMEFIELDS_SINCRONIZACION cuando ya se sincronizaron todos los productos
-- Permisos Tunnel
 - Descripciones de productos no escapan en SQL
+- Cuando se está insertand un precio con otra UNIDAD de medida ajena a la original, la sincronización la está tomando: 
+INSERT INTO TBPRODUCPRECIOS (CODITM, UNIDADVTA, PVENTA) VALUES ('10001', 'GLP', 50);
+
 - Excel de productos sin foto
+- Permisos Tunnel
