@@ -19,11 +19,23 @@ const rateLimit: Promise<any> = RateLimiter({
 	}
 });
 
+//Crear deniedService para rechazar solicitudes que no correspondan a la ruta woocommerce/nuevo_pedido_creado
+
+const deniedService = async (context: any, next: any) => {
+	if (context.request.url.pathname.includes("nuevo_pedido_creado")) {
+		await next();
+	} else {
+		context.response.status = 403;
+		context.response.body = "Acceso denegado";
+	}
+};
+
 
 const app = new Application();
 const port: number = +(Deno.env.get("SYNC_SERVER_PORT") ?? "8000");
 
 app.use(await rateLimit);
+app.use(deniedService);
 app.use(indexRouter.routes());
 app.use(indexRouter.allowedMethods());
 app.use(oakCors({ origin: "*" }));

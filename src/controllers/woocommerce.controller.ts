@@ -13,7 +13,7 @@ import processWebhook from "./woocommerce/processWebhook.ts";
 export default {
 	"": async ({ response }: { response: Response }) => {
 
-		//Verificar si la conexión a WooCommerce está activa
+		//Verificar si la conexión a WooCommerce está activa;
 
 		try {
 			const result = await Woo.get("webhooks", Object.assign({ page: 1, per_page: 1 }));

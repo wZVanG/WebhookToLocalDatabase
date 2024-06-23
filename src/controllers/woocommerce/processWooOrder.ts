@@ -99,10 +99,13 @@ export default async (ventas: Order[], pool: ConnectionPool) => {
 
 			const productosUnidadResult = await executeQuery(transaction, productosUnidadQuery, Object.fromEntries(line_items_skus.map((sku, i) => [`sku${i}`, sku])));
 
+			console.log("productosUnidadResult.recordset ->", productosUnidadResult.recordset);
+
 			//Buscar en local la unidad, anteriormente se buscaba en WooCommerce creando una petición por cada sku
 			const findUnidadVta = (sku: string) => {
 				if (!productosUnidadResult) return 'UND';
-				const item = productosUnidadResult.recordset.find((item: any) => item.CODITM === sku && item.TIPOUNIDAD === 1) || productosUnidadResult.recordset.find((item: any) => item.CODITM === sku);
+				const item = productosUnidadResult.recordset.find((item: any) => String(item.CODITM) === String(sku) && Number(item.TIPOUNIDAD) === 1) || productosUnidadResult.recordset.find((item: any) => String(item.CODITM) === String(sku));
+				console.log("Line", sku, " -> ", item);
 				return item ? item.UNIDADVTA.trim() : 'UND';
 			}
 
@@ -110,7 +113,11 @@ export default async (ventas: Order[], pool: ConnectionPool) => {
 			for (const item of line_items) {
 				const { sku, quantity, price, name } = item;
 				const preciofinal = quantity * price;
+
 				const unidad = findUnidadVta(sku);
+
+				console.log("sku ->", sku);
+				console.log("unidad ->", unidad);
 
 				const prof2Query = `INSERT INTO ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_PROFORMA_ITEM} 
 					(codtda, coditm, unidad, cantidad, pventatot, cantegr, unidadegr, status, tasaigv, negr)

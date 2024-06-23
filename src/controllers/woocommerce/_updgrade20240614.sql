@@ -175,7 +175,8 @@ BEGIN
         SELECT GETDATE(), @tipo_movimiento, i.CODITM, i.CODTDA, i.STOCK, 'U' 
         FROM inserted i
         INNER JOIN deleted d ON i.CODITM = d.CODITM AND i.CODTDA = d.CODTDA
-        WHERE i.STOCK <> d.STOCK OR d.STOCK IS NULL;
+        WHERE i.STOCK <> d.STOCK OR d.STOCK IS NULL 
+			AND i.CODTDA = '01';
     END
 END;
 
@@ -202,7 +203,8 @@ BEGIN
     -- Insertar en tabla actualizacion_web_local para posterior sincronización
     INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, codigo_tienda, stock, crud)
     SELECT GETDATE(), @tipo_movimiento, CODITM, CODTDA, STOCK, 'C' 
-    FROM inserted;
+    FROM inserted
+	WHERE CODTDA = '01';
 END;
 GO
 
