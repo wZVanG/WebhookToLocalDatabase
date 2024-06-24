@@ -49,14 +49,19 @@ app.addEventListener("listen", ({ secure, hostname, port }) => {
 
 	logger.info(`Server iniciado: ${url}`);
 
-	initTasks([
-		{
-			"name": "taskProccessLocal",
-			"interval": Number(Deno.env.get("LAN_COMMERCE_SEGUNDOS_SINCRONIZACION") ?? 60) * 1000,
-			"autostart": true,
-			"requiredb": true
-		}
-	]);
+	const enabledTaskProccessLocal = Number(Deno.env.get("LAN_COMMERCE_TASK_ENABLED_PROCESSLOCAL")) === 1;
+
+	if (enabledTaskProccessLocal) {
+		initTasks([
+			{
+				"name": "taskProccessLocal",
+				"interval": Number(Deno.env.get("LAN_COMMERCE_SEGUNDOS_SINCRONIZACION") ?? 60) * 1000,
+				"autostart": true,
+				"requiredb": true
+			}
+		]);
+	}
+
 
 	fileHandler.flush();
 

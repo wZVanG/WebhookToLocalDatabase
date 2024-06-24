@@ -165,7 +165,9 @@ export interface WooProductExtend {
 	unidad?: string | null;
 	precio?: number | null;
 	codean?: string | null | undefined;
-	[key: string]: Array<WooProductMetaData> | string | null | number | undefined;
+	activo?: boolean;
+	catalog_visibility?: "visible" | "hidden" | "search" | "catalog";
+	[key: string]: Array<WooProductMetaData> | string | null | number | boolean | undefined;
 }
 
 export interface WooProduct {

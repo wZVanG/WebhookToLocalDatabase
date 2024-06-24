@@ -94,6 +94,32 @@ export default {
 
 	},
 
+	"product_export_by_tda": async ({ response, request }: { response: Response, request: Request }) => {
+
+		const params = constructParams(request.url.searchParams);
+
+		try {
+
+			if (!params.codtda) throw new Error('El parámetro codtda es requerido');
+
+			const sql = `SELECT CODITM FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_PRODUCTOS_STOCKS} WHERE CODTDA = @codtda AND STOCK > 0 ORDER BY CODITM ASC`;
+
+			const result = await dbClient().request().input('codtda', params.codtda).query(sql);
+
+			const items = result.recordset;
+
+			//Genera un archivo csv con los resultados, y se descarga automáticamente
+
+			response.headers.set('Content-Disposition', `attachment; filename=productos_${params.codtda}.csv`);
+			response.headers.set('Content-Type', 'text/csv');
+			response.body = items.map((item: any) => item.CODITM).join('\n');
+
+		} catch (err) {
+			errorRequestHandler(err.message, err, response, request);
+		}
+	},
+
+
 	//SELECT TOP 1 OFICIAL FROM LAN_COMMERCE_TABLENAME_TIPOCAMBIO ORDER BY FECHA DESC
 
 	"tipo_cambio": async ({ response, request }: { response: Response, request: Request }) => {

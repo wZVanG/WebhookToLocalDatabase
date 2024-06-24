@@ -53,7 +53,7 @@ END;
 
 -- Eliminar contenido de la tabla actualizacion_web_local
 
-DELETE FROM actualizacion_web_local;
+-- DELETE FROM actualizacion_web_local;
 
 GO
 
@@ -175,8 +175,7 @@ BEGIN
         SELECT GETDATE(), @tipo_movimiento, i.CODITM, i.CODTDA, i.STOCK, 'U' 
         FROM inserted i
         INNER JOIN deleted d ON i.CODITM = d.CODITM AND i.CODTDA = d.CODTDA
-        WHERE i.STOCK <> d.STOCK OR d.STOCK IS NULL 
-			AND i.CODTDA = '01';
+        WHERE i.STOCK <> d.STOCK OR d.STOCK IS NULL;
     END
 END;
 
@@ -203,8 +202,7 @@ BEGIN
     -- Insertar en tabla actualizacion_web_local para posterior sincronización
     INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, codigo_tienda, stock, crud)
     SELECT GETDATE(), @tipo_movimiento, CODITM, CODTDA, STOCK, 'C' 
-    FROM inserted
-	WHERE CODTDA = '01';
+    FROM inserted;
 END;
 GO
 
@@ -240,6 +238,7 @@ BEGIN
         '"unidad":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(UNIDAD, '')))) + '",' +
         '"categoria":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(CODLIN, '')))) + '",' +
 		'"stockmin":' + COALESCE(CAST(STOCKMIN AS NVARCHAR(MAX)), 'null') + ',' +
+		'"activo":' + COALESCE(CAST(ACTIVO AS NVARCHAR(MAX)), '0') + ',' +
 		'"codean":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(CODEAN, '')))) + '"' +
         '}'
     FROM inserted;
@@ -284,6 +283,7 @@ BEGIN
             ISNULL(i.UNIDAD, '') <> ISNULL(d.UNIDAD, '') OR
             ISNULL(i.CODLIN, '') <> ISNULL(d.CODLIN, '') OR
 			ISNULL(i.STOCKMIN, '') <> ISNULL(d.STOCKMIN, '') OR
+			ISNULL(i.ACTIVO, '') <> ISNULL(d.ACTIVO, '') OR
             ISNULL(i.CODEAN, '') <> ISNULL(d.CODEAN, '')
     )
     BEGIN
@@ -293,6 +293,7 @@ BEGIN
             '"unidad":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.UNIDAD, '')))) + '",' +
             '"categoria":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.CODLIN, '')))) + '",' +
 			'"stockmin":' + COALESCE(CAST(i.STOCKMIN AS NVARCHAR(MAX)), 'null') + ',' +
+			'"activo":' + COALESCE(CAST(i.ACTIVO AS NVARCHAR(MAX)), '0') + ',' +
             '"codean":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.CODEAN, '')))) + '"' +
             '}'
         FROM inserted i;

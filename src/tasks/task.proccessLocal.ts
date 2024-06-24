@@ -29,6 +29,8 @@ export default async () => {
 					CONSTANTS.TIPO_SINCRONIZACION.SERVER_STOCK
 				];
 
+				const codTda = String(Deno.env.get("LAN_COMMERCE_CODTDA")) || "01";
+
 				const query = await executeQuery(db, `
 					SELECT TOP 100
 						t1.id, t1.tipo, t1.fecha_transaccion, t1.codigo_tienda, t1.codigo_item, t1.stock, t1.infojson, t1.crud
@@ -59,8 +61,6 @@ export default async () => {
 				const woo_items = await Woo.get("products_advanced", { skus: skus.join(",") });
 				const woocommerce_batch_arr: Array<WooProduct> = [];
 
-				logger.debug("LOCAL Items:", local_items);
-
 				for (const item of local_items) {
 					const new_woo_item = {} as WooProduct;
 					const woo_item_found: WooProduct | undefined = woo_items.find((woo_item: WooProduct) => String(woo_item.sku) === String(item.codigo_item));
@@ -80,8 +80,6 @@ export default async () => {
 						logger.error(`Error al parsear JSON de infojson: ${error.message ? error.message : error.toString()}`, item.infojson);
 					}
 
-					logger.debug(`Item extendido:`, item_extended)
-
 					//Si no se encuentra el producto en WooCommerce, vamos a insertar
 
 					if (!woo_item_found) {
@@ -100,7 +98,7 @@ export default async () => {
 
 							//Si no hay suficiente información para insertar el producto, se busca en la tabla de productos
 							if (product_empty) {
-								const productQuery = `SELECT CODITM, DESITM, CODLIN, UNIDAD, CODEAN, STOCKMIN FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_PRODUCTOS} WHERE CODITM = '${item.codigo_item}'`;
+								const productQuery = `SELECT CODITM, DESITM, CODLIN, UNIDAD, CODEAN, STOCKMIN, ACTIVO FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_PRODUCTOS} WHERE CODITM = '${item.codigo_item}'`;
 								const productResult = await executeQuery(db, productQuery);
 								if (productResult.recordset.length) {
 									const producto = productResult.recordset[0];
@@ -110,6 +108,7 @@ export default async () => {
 									item_extended.precio = parseFloat(producto.COSTOACT || 0);
 									item_extended.codean = String(producto.CODEAN || "").trim();
 									item_extended.stockmin = parseFloat(producto.STOCKMIN || 0) ? parseFloat(producto.STOCKMIN || 0) : null;
+									item_extended.activo = !!(+producto.ACTIVO);
 								}
 
 								// Obtener el precio correcto desde TBPRODUCPRECIOS
@@ -132,19 +131,13 @@ export default async () => {
 								}
 							}
 
-							/*new_woo_item.name = item_extended.descripcion || `Producto ${item.codigo_item}`;
-							new_woo_item.sku = item.codigo_item;
-							new_woo_item.stock_quantity = 0;
-							new_woo_item.regular_price = parseFloat(String(item_extended.precio || 0));
-							new_woo_item.status = "publish";
-							new_woo_item.manage_stock = true;
-							new_woo_item.short_description = item_extended.unidad || "";*/
-
 							Object.assign(new_woo_item, productSetFields({
 								name: item_extended.descripcion,
 								sku: item.codigo_item,
 								stock_quantity: 0,
 								regular_price: item_extended.precio,
+								//status: item_extended.activo ? "publish" : "private",
+								activo: item_extended.activo,
 								status: "publish",
 								manage_stock: true,
 								unidad: item_extended.unidad,
@@ -180,7 +173,10 @@ export default async () => {
 
 						} else if (item.tipo === CONSTANTS.TIPO_SINCRONIZACION.SERVER_STOCK) {
 
-							if (item.stock !== woo_item_found.stock_quantity) new_woo_item.stock_quantity = item.stock;
+							logger.debug(`${item.codigo_tienda} (${item.codigo_item}) - ${woo_item_found.stock_quantity} :: ${item.stock} - ${item.infojson}`);
+
+							//Validar si el stock es diferente y validar también la tienda
+							if (item.codigo_tienda === codTda && item.stock !== woo_item_found.stock_quantity) new_woo_item.stock_quantity = item.stock;
 
 						}
 					}

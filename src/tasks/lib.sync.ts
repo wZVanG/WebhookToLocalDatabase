@@ -57,17 +57,6 @@ export const productSetEan = (product: WooProductExtend, ean: string): Array<Woo
 	return product.meta_data;
 }
 
-/*new_product.name = item_extended.descripcion || `Producto ${item.codigo_item}`;
-new_product.sku = item.codigo_item;
-new_product.stock_quantity = 0;
-new_product.regular_price = parseFloat(String(item_extended.precio || 0));
-new_product.status = "publish";
-new_product.manage_stock = true;
-new_product.short_description = item_extended.unidad || "";
-
-if (!item_extended.regular_price) new_product.status = "private";
-if (item_extended.codean) new_product.meta_data = productSetEan(item_extended, String(item_extended.codean || ""));*/
-
 export const productSetFields = (fields: { [key: string]: any }): WooProductExtend => {
 
 	const new_product: WooProductExtend = {};
@@ -84,8 +73,6 @@ export const productSetFields = (fields: { [key: string]: any }): WooProductExte
 
 	if (!new_product.regular_price) new_product.status = "pending";
 	new_product.meta_data = productSetEan(fields, String(fields.codean || ""));
-
-	//low_stock_amount
 
 	return new_product;
 }

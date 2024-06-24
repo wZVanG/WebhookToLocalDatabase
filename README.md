@@ -37,7 +37,7 @@ Aplicación Deno para escuchar Webhooks y ejecutar consultas en un servidor SQL 
 1. Inicia la aplicación:
 
     ```bash
-    deno run --allow-read --allow-env --allow-net --allow-sys --watch server.ts
+    deno task dev
     ```
 
 2. La aplicación estará escuchando los Webhooks en el puerto especificado (por defecto, 8000). Configura tus servicios web para enviar Webhooks directamente a la URL pública de tu servidor local.
@@ -63,18 +63,3 @@ Aplicación Deno para escuchar Webhooks y ejecutar consultas en un servidor SQL 
     <td align="center"><a href="https://stackoverflow.com/users/1074519/walter-chapilliquen-wzvang"><img src="https://i.sstatic.net/aaKX6.jpg?s=256" width="100px;" alt="Walter Chapilliquen"/></a><br /><sub>💻<b>Walter Chapilliquen</b> (wZVanG)</sub><br/><a href="https://stackoverflow.com/users/1074519/walter-chapilliquen-wzvang">Perfil de StackOverflow</a></td>
   </tr>
 </table>
-
--- Seguir haciendo pruebas de actualización de productos para ver si se está sincronizando el precio, y atributos si es necesario
-
-1: Retail (Este)
-2: Mayorista
-En caso 2-2 (Jala el que manda el Stock)
-- Stock masive: Actualizar EAN, Actualizar Precios, Vaciar etiquetas
-- Pasar updgrade20240614
-- Desactivar LAN_COMMERCE_EMPTY_SOMEFIELDS_SINCRONIZACION cuando ya se sincronizaron todos los productos
-- Descripciones de productos no escapan en SQL
-- Cuando se está insertand un precio con otra UNIDAD de medida ajena a la original, la sincronización la está tomando: 
-INSERT INTO TBPRODUCPRECIOS (CODITM, UNIDADVTA, PVENTA) VALUES ('10001', 'GLP', 50);
-
-- Excel de productos sin foto
-- Permisos Tunnel
