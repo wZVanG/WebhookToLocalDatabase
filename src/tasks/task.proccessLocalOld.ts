@@ -17,39 +17,8 @@ const tiposSincronizacion: Array<number> = [
 	CONSTANTS.TIPO_SINCRONIZACION.SERVER_CATEGORIA
 ];
 
-const checkDbClient = () => {
-	const db = dbClient();
-	if (!db) throw new Error("No hay una conexión a la base de datos activa");
-	return db;
-
-}
-
-const getLocalSyncRows = async (db: any) => {
-
-	const queryLocalSyncRows = await executeQuery(db, replaceQueryValues(queryList.localSyncRows, { "tiposList": tiposSincronizacion.join(",") }));
-
-	if (!queryLocalSyncRows.recordset.length) throw new Error("MESSAGE_EMPTY");
-
-	const localRecords: LocalProductStock[] = queryLocalSyncRows.recordset;
-
-	const skus: string[] = localRecords
-		.filter((row: LocalProductStock) => tiposSincronizacionProductos.indexOf(Number(row.tipo)) > -1)
-		.map((row: LocalProductStock) => String(row.codigo_item || "").trim())
-		.filter((sku: string) => sku.length > 0);
-	const catIds: number[] = localRecords
-		.filter((row: LocalProductStock) => Number(row.tipo) === CONSTANTS.TIPO_SINCRONIZACION.SERVER_CATEGORIA)
-		.map((row: LocalProductStock) => Number(row.codigo_item))
-		.filter((catid: number) => catid > 0);
-
-	return { localRecords, skus, catIds };
-
-}
-
 // deno-lint-ignore require-await
 export default async () => {
-
-	const enableProductForceCreation = true;
-	const codTda = String(Deno.env.get("LAN_COMMERCE_CODTDA")) || "01";
 
 	let isProcessing = false;
 
@@ -62,16 +31,31 @@ export default async () => {
 
 			try {
 
-				const db = checkDbClient();
-				const { localRecords, skus, catIds } = await getLocalSyncRows(db);
-				const syncIdsToDelete: number[] = [];
+				const db = dbClient();
+				if (!db) throw new Error("No hay una conexión a la base de datos activa");
+
+				const codTda = String(Deno.env.get("LAN_COMMERCE_CODTDA")) || "01";
+
+				const queryLocalSyncRows = await executeQuery(db, replaceQueryValues(queryList.localSyncRows, { "tiposList": tiposSincronizacion.join(",") }));
+
+				if (!queryLocalSyncRows.recordset.length) {
+					logger.debug(`No hay productos/categorias para sincronizar en WooCommerce`);
+					return false;
+				}
+
+				//Crear productos si no existen en WooCommerce
+				const enableProductForceCreation = true;
+				const updatedItemLogs: Array<WooProductLog> = [];
+				const localRecords = queryLocalSyncRows.recordset;
+				const syncIdsToDelete: Array<number> = [];
+				const skus: Array<string> = localRecords
+					.filter((row: LocalProductStock) => tiposSincronizacionProductos.indexOf(Number(row.tipo)) > -1)
+					.map((row: LocalProductStock) => String(row.codigo_item || "").trim())
+					.filter((sku: string) => sku.length > 0);
 
 				//Obtener los productos de WooCommerce: id
 				const wooItems = await Woo.get("products_advanced", { skus: skus.join(",") });
 				const wooBatchArray: Array<WooProduct> = [];
-
-
-				//Crear productos si no existen en WooCommerce
 
 				for (const item of localRecords) {
 					const wooProductToAdd = {} as WooProduct;
@@ -203,16 +187,16 @@ export default async () => {
 						}
 
 						wooBatchArray.push(wooProductToAdd);
+						updatedItemLogs.push({ ...wooProductToAdd, sku: item.codigo_item, codigo_tienda: item.codigo_tienda });
 					}
 
 				}
 
 				const newProductsToInsert = wooBatchArray.filter((item: WooProduct) => !item.id);
-				const productsToUpdate = wooBatchArray.filter((item: WooProduct) => !!item.id);
 
 				if (newProductsToInsert.length) {
 
-					logger.debug("INSERT BATCH:", newProductsToInsert);
+					logger.debug("INSERT batch:", wooBatchArray);
 
 					const productInsertionResult = await Woo.post("products/batch", { create: newProductsToInsert });
 
@@ -223,20 +207,23 @@ export default async () => {
 
 					logger.info(`Productos insertados: ${newProductsToInsert.length}`, newProductsToInsert);
 
-				}
+				} else {
 
-				if (productsToUpdate.length) {
+					logger.debug("UPDATE batch:", wooBatchArray);
 
-					logger.debug("UPDATE BATCH:", productsToUpdate);
+					//Actualizar los productos en WooCommerce
 
-					const productUpdateResult = await Woo.post("products/batch", { update: productsToUpdate });
+					if (wooBatchArray.length) {
+						const productUpdateResult = await Woo.post("products/batch", { update: wooBatchArray });
 
-					if (!productUpdateResult?.update?.length || productUpdateResult.update.length !== productsToUpdate.length) {
-						logger.error(`No se pudo actualizar los productos en WooCommerce`, productsToUpdate);
-						return false;
+						if (!productUpdateResult?.update?.length || productUpdateResult.update.length !== wooBatchArray.length) {
+							logger.error(`No se pudo actualizar los productos en WooCommerce`, wooBatchArray);
+							return false;
+						}
+
+						logger.info(`Productos actualizados: ${updatedItemLogs.length}`, updatedItemLogs);
 					}
 
-					logger.info(`Productos actualizados: ${productsToUpdate.length}`, productsToUpdate);
 
 				}
 
@@ -275,17 +262,7 @@ export default async () => {
 				return true;
 
 			} catch (error) {
-				if (error.message === "MESSAGE_EMPTY") {
-					logger.debug(`No hay productos/categorias para sincronizar en WooCommerce`);
-				} else {
-
-					//Evitar mostrar información sensible en el log
-					const regex = /c(s|k)_\w+/g;
-					if (error.message && regex.test(error.message)) error.message = error.message.replace(regex, "c$1_XXXXX");
-
-					logger.error(`Error al ejecutar tarea: taskProccessLocal: ${error.message ? error.message : error.toString()}`);
-
-				}
+				logger.error(`Error al ejecutar tarea: taskProccessLocal: ${error.message ? error.message : error.toString()}`);
 			} finally {
 				isProcessing = false;
 			}

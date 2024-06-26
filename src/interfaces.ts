@@ -191,12 +191,14 @@ export interface WooProductLog extends WooProduct {
 }
 
 export interface LocalProductStock {
+	id: number;
 	codigo_tienda: string;
 	codigo_item: string;
 	stock: number;
 	tipo: number;
 	infojson: string;
 	crud: string;
+	id_categoria: number;
 }
 
 export interface LocalProductStockTda {

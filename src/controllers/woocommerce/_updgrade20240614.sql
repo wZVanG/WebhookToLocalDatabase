@@ -8,6 +8,7 @@
 -- WEB_STOCK: 7,
 -- SERVER_STOCK: 8
 -- SERVER_PRECIO: 9
+-- SERVER_CATEGORIA: 10
 
 -- Eliminar trigger obsoleto (TriggerVentasInsert) si existe
 IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'TriggerVentasInsert')
@@ -464,5 +465,66 @@ BEGIN
     CLOSE PriceCursor;
     DEALLOCATE PriceCursor;
 END;
+
+GO
+
+IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'TriggerCategoryInsertUpdate')
+BEGIN
+	DROP TRIGGER TriggerCategoryInsertUpdate;
+END;
+
+GO
+
+CREATE TRIGGER TriggerCategoryInsertUpdate
+ON [dbo].[TBCATEGORIAS]
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @tipo_movimiento INT;
+    DECLARE @infojson NVARCHAR(MAX);
+
+    SET @tipo_movimiento = 10; -- SERVER_CATEGORIA
+
+    -- Manejo de inserciones
+    IF EXISTS (SELECT 1 FROM inserted i LEFT JOIN deleted d ON i.codcat = d.codcat WHERE d.codcat IS NULL)
+    BEGIN
+        SELECT @infojson = 
+            '{' +
+            '"descripcion":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.descat, '')))) + '",' +
+            '"activo":' + COALESCE(CAST(i.activo AS NVARCHAR(MAX)), '0') + '' +
+            '}'
+        FROM inserted i;
+
+        INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson, crud)
+        SELECT GETDATE(), @tipo_movimiento, i.codcat, @infojson, 'I'
+        FROM inserted i
+        LEFT JOIN deleted d ON i.codcat = d.codcat
+        WHERE d.codcat IS NULL;
+    END
+
+    -- Manejo de actualizaciones
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        JOIN deleted d ON i.codcat = d.codcat
+        WHERE 
+            ISNULL(i.descat, '') <> ISNULL(d.descat, '')
+    )
+    BEGIN
+        SELECT @infojson = 
+            '{' +
+            '"descripcion":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.descat, '')))) + '",' +
+            '"activo":' + COALESCE(CAST(i.activo AS NVARCHAR(MAX)), '0') + '' +
+            '}'
+        FROM inserted i;
+
+        INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson, crud)
+        SELECT GETDATE(), @tipo_movimiento, i.codcat, @infojson, 'U'
+        FROM inserted i;
+    END;
+END;
+
 
 GO

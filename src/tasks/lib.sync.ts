@@ -37,6 +37,19 @@ export const queryList = {
 		COALESCE(ps.PVENTA, pr.COSTOACT) AS PRECIOFINAL
 	FROM PreciosSeleccionados ps
 	JOIN TBPRODUC pr ON ps.CODITM = pr.CODITM
+	`,
+	localSyncRows: `
+	SELECT TOP 100
+		t1.id, t1.tipo, t1.fecha_transaccion, t1.codigo_tienda, t1.codigo_item, t1.stock, t1.infojson, t1.crud, t1.id_categoria
+	FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_SINCRONIZACION} t1
+	INNER JOIN (
+		SELECT 
+			codigo_item, tipo, crud, MAX(id) AS max_id
+		FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_SINCRONIZACION}
+		WHERE tipo IN ({tiposList}) AND fecha_actualizacion_stock IS NULL
+		GROUP BY codigo_item, tipo, crud
+	) t2 ON t1.codigo_item = t2.codigo_item AND t1.tipo = t2.tipo AND t1.crud = t2.crud AND t1.id = t2.max_id
+	ORDER BY t1.id ASC
 	`
 }
 
