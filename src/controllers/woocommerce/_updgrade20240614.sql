@@ -124,6 +124,21 @@ END;
 
 GO
 
+-- Agregar columna woocommerce_id a la tabla TBCATEGORIAS
+
+IF NOT EXISTS (
+    SELECT 1 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_NAME = 'TBCATEGORIAS' 
+      AND COLUMN_NAME = 'woocommerce_id'
+)
+BEGIN
+    ALTER TABLE TBCATEGORIAS
+    ADD woocommerce_id INT;
+END;
+
+GO
+
 IF EXISTS (
     SELECT * 
     FROM sys.objects 
@@ -493,6 +508,7 @@ BEGIN
         SELECT @infojson = 
             '{' +
             '"descripcion":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.descat, '')))) + '",' +
+			'"woocommerce_id":' + COALESCE(CAST(i.woocommerce_id AS NVARCHAR(MAX)), 'null') + ',' +
             '"activo":' + COALESCE(CAST(i.activo AS NVARCHAR(MAX)), '0') + '' +
             '}'
         FROM inserted i;
@@ -516,6 +532,7 @@ BEGIN
         SELECT @infojson = 
             '{' +
             '"descripcion":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.descat, '')))) + '",' +
+			'"woocommerce_id":' + COALESCE(CAST(i.woocommerce_id AS NVARCHAR(MAX)), 'null') + ',' +
             '"activo":' + COALESCE(CAST(i.activo AS NVARCHAR(MAX)), '0') + '' +
             '}'
         FROM inserted i;

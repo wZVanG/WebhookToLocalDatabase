@@ -158,7 +158,7 @@ export interface WooProductMetaData {
 	value: string;
 }
 
-export interface WooProductExtend {
+export interface LocalSyncExtend {
 	descripcion?: string | null;
 	meta_data?: Array<WooProductMetaData> | null;
 	codlin?: string | null;
@@ -168,6 +168,12 @@ export interface WooProductExtend {
 	activo?: boolean;
 	catalog_visibility?: "visible" | "hidden" | "search" | "catalog";
 	[key: string]: Array<WooProductMetaData> | string | null | number | boolean | undefined;
+}
+
+export interface WooProductCategogy {
+	id: number;
+	name: string;
+	cod_cat_local: null | string;
 }
 
 export interface WooProduct {
@@ -180,7 +186,7 @@ export interface WooProduct {
 	status: string;
 	manage_stock: boolean;
 	short_description: string;
-	categories: Array<string>;
+	categories: WooProductCategogy[];
 	low_stock_amount?: number | null;
 	ean?: string;
 	meta_data?: Array<WooProductMetaData>;
