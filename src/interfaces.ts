@@ -170,6 +170,25 @@ export interface LocalSyncExtend {
 	[key: string]: Array<WooProductMetaData> | string | null | number | boolean | undefined;
 }
 
+export interface LocalSyncCategory {
+	descripcion: string | null;
+	woocommerce_id: number | null;
+	activo?: number;
+}
+
+export interface WooUpsertCategory {
+	id: number;
+	name: string;
+}
+
+export interface WooUpsertCategoryResponse {
+	id: number;
+	name: string;
+	cod_cat_local: number;
+	status: "updated" | "created" | "exists" | "error";
+	error?: string | null;
+}
+
 export interface WooProductCategogy {
 	id: number;
 	name: string;

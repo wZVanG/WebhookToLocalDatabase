@@ -241,31 +241,27 @@ ON [dbo].[TBPRODUC]
 AFTER INSERT
 AS
 BEGIN
-	SET NOCOUNT ON;
+    SET NOCOUNT ON;
 
-	DECLARE @tipo_movimiento INT;
-	DECLARE @infojson NVARCHAR(MAX);
-	
-	SET @tipo_movimiento = 6; -- SERVER_PRODUCTO
+    DECLARE @tipo_movimiento INT;
+    SET @tipo_movimiento = 6; -- SERVER_PRODUCTO
 
-    SELECT @infojson = 
+    INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson, crud)
+    SELECT 
+        GETDATE(), 
+        @tipo_movimiento, 
+        CODITM, 
         '{' +
         '"descripcion":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(DESITM, '')))) + '",' +
         '"unidad":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(UNIDAD, '')))) + '",' +
         '"categoria":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(CODLIN, '')))) + '",' +
-		'"stockmin":' + COALESCE(CAST(STOCKMIN AS NVARCHAR(MAX)), 'null') + ',' +
-		'"activo":' + COALESCE(CAST(ACTIVO AS NVARCHAR(MAX)), '0') + ',' +
-		'"codean":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(CODEAN, '')))) + '"' +
-        '}'
+        '"stockmin":' + COALESCE(CAST(STOCKMIN AS NVARCHAR(MAX)), 'null') + ',' +
+        '"activo":' + COALESCE(CAST(ACTIVO AS NVARCHAR(MAX)), '0') + ',' +
+        '"codean":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(CODEAN, '')))) + '"' +
+        '}', 
+        'C'
     FROM inserted;
-		
-	-- La columna infojson almacenará la descripción del producto, el precio, la unidad, y la categoría
-	INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson, crud)
-	SELECT GETDATE(), @tipo_movimiento, CODITM, @infojson, 'C'
-	FROM inserted;
-
 END;
-
 GO
 
 -- También creamos el trigger TriggerProductUpdate para insertar en la tabla actualizacion_web_local en caso de que se actualice un producto
@@ -285,42 +281,34 @@ BEGIN
     SET NOCOUNT ON;
 
     DECLARE @tipo_movimiento INT;
-    DECLARE @infojson NVARCHAR(MAX);
-    
     SET @tipo_movimiento = 6; -- SERVER_PRODUCTO
 
-    -- Insertar en actualizacion_web_local solo si alguna de las columnas ha cambiado
-    IF EXISTS (
-        SELECT 1
-        FROM inserted i
-        JOIN deleted d ON i.CODITM = d.CODITM
-        WHERE 
-            ISNULL(i.DESITM, '') <> ISNULL(d.DESITM, '') OR
-            ISNULL(i.UNIDAD, '') <> ISNULL(d.UNIDAD, '') OR
-            ISNULL(i.CODLIN, '') <> ISNULL(d.CODLIN, '') OR
-			ISNULL(i.STOCKMIN, '') <> ISNULL(d.STOCKMIN, '') OR
-			ISNULL(i.ACTIVO, '') <> ISNULL(d.ACTIVO, '') OR
-            ISNULL(i.CODEAN, '') <> ISNULL(d.CODEAN, '')
-    )
-    BEGIN
-        SELECT @infojson = 
-            '{' +
-            '"descripcion":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.DESITM, '')))) + '",' +
-            '"unidad":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.UNIDAD, '')))) + '",' +
-            '"categoria":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.CODLIN, '')))) + '",' +
-			'"stockmin":' + COALESCE(CAST(i.STOCKMIN AS NVARCHAR(MAX)), 'null') + ',' +
-			'"activo":' + COALESCE(CAST(i.ACTIVO AS NVARCHAR(MAX)), '0') + ',' +
-            '"codean":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.CODEAN, '')))) + '"' +
-            '}'
-        FROM inserted i;
-
-        -- La columna infojson almacenará la descripción del producto, el precio, la unidad, y la categoría
-        INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson, crud)
-        SELECT GETDATE(), @tipo_movimiento, i.CODITM, @infojson, 'U'
-        FROM inserted i;
-    END;
+    INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson, crud)
+    SELECT 
+        GETDATE(), 
+        @tipo_movimiento, 
+        i.CODITM, 
+        '{' +
+        '"descripcion":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.DESITM, '')))) + '",' +
+        '"unidad":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.UNIDAD, '')))) + '",' +
+        '"categoria":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.CODLIN, '')))) + '",' +
+        '"stockmin":' + COALESCE(CAST(i.STOCKMIN AS NVARCHAR(MAX)), 'null') + ',' +
+        '"activo":' + COALESCE(CAST(i.ACTIVO AS NVARCHAR(MAX)), '0') + ',' +
+        '"codean":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.CODEAN, '')))) + '"' +
+        '}', 
+        'U'
+    FROM 
+        inserted i
+    JOIN 
+        deleted d ON i.CODITM = d.CODITM
+    WHERE 
+        ISNULL(i.DESITM, '') <> ISNULL(d.DESITM, '') OR
+        ISNULL(i.UNIDAD, '') <> ISNULL(d.UNIDAD, '') OR
+        ISNULL(i.CODLIN, '') <> ISNULL(d.CODLIN, '') OR
+        ISNULL(i.ACTIVO, '') <> ISNULL(d.ACTIVO, '') OR
+        ISNULL(i.CODEAN, '') <> ISNULL(d.CODEAN, '') OR
+        COALESCE(i.STOCKMIN, -1) <> COALESCE(d.STOCKMIN, -1); -- Usamos un valor seguro para comparación numérica
 END;
-
 GO
 
 -- Creamos el trigger TriggerPrecioInsert para insertar en la tabla actualizacion_web_local en caso de que se inserte un nuevo precio
@@ -498,50 +486,47 @@ BEGIN
     SET NOCOUNT ON;
 
     DECLARE @tipo_movimiento INT;
-    DECLARE @infojson NVARCHAR(MAX);
-
     SET @tipo_movimiento = 10; -- SERVER_CATEGORIA
 
     -- Manejo de inserciones
-    IF EXISTS (SELECT 1 FROM inserted i LEFT JOIN deleted d ON i.codcat = d.codcat WHERE d.codcat IS NULL)
-    BEGIN
-        SELECT @infojson = 
-            '{' +
-            '"descripcion":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.descat, '')))) + '",' +
-			'"woocommerce_id":' + COALESCE(CAST(i.woocommerce_id AS NVARCHAR(MAX)), 'null') + ',' +
-            '"activo":' + COALESCE(CAST(i.activo AS NVARCHAR(MAX)), '0') + '' +
-            '}'
-        FROM inserted i;
-
-        INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson, crud)
-        SELECT GETDATE(), @tipo_movimiento, i.codcat, @infojson, 'I'
-        FROM inserted i
-        LEFT JOIN deleted d ON i.codcat = d.codcat
-        WHERE d.codcat IS NULL;
-    END
+    INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson, crud)
+    SELECT 
+        GETDATE(), 
+        @tipo_movimiento, 
+        i.codcat, 
+        '{' +
+        '"descripcion":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.descat, '')))) + '",' +
+        '"woocommerce_id":' + COALESCE(CAST(i.woocommerce_id AS NVARCHAR(MAX)), 'null') + ',' +
+        '"activo":' + COALESCE(CAST(i.activo AS NVARCHAR(MAX)), '0') + '' +
+        '}', 
+        'I'
+    FROM 
+        inserted i
+    LEFT JOIN 
+        deleted d ON i.codcat = d.codcat
+    WHERE 
+        d.codcat IS NULL;
 
     -- Manejo de actualizaciones
-    IF EXISTS (
-        SELECT 1
-        FROM inserted i
-        JOIN deleted d ON i.codcat = d.codcat
-        WHERE 
-            ISNULL(i.descat, '') <> ISNULL(d.descat, '')
-    )
-    BEGIN
-        SELECT @infojson = 
-            '{' +
-            '"descripcion":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.descat, '')))) + '",' +
-			'"woocommerce_id":' + COALESCE(CAST(i.woocommerce_id AS NVARCHAR(MAX)), 'null') + ',' +
-            '"activo":' + COALESCE(CAST(i.activo AS NVARCHAR(MAX)), '0') + '' +
-            '}'
-        FROM inserted i;
-
-        INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson, crud)
-        SELECT GETDATE(), @tipo_movimiento, i.codcat, @infojson, 'U'
-        FROM inserted i;
-    END;
+    INSERT INTO actualizacion_web_local (fecha_transaccion, tipo, codigo_item, infojson, crud)
+    SELECT 
+        GETDATE(), 
+        @tipo_movimiento, 
+        i.codcat, 
+        '{' +
+        '"descripcion":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.descat, '')))) + '",' +
+        '"woocommerce_id":' + COALESCE(CAST(i.woocommerce_id AS NVARCHAR(MAX)), 'null') + ',' +
+        '"activo":' + COALESCE(CAST(i.activo AS NVARCHAR(MAX)), '0') + '' +
+        '}', 
+        'U'
+    FROM 
+        inserted i
+    JOIN 
+        deleted d ON i.codcat = d.codcat
+    WHERE 
+        ISNULL(i.descat, '') <> ISNULL(d.descat, '') OR
+        ISNULL(i.activo, '') <> ISNULL(d.activo, '') OR
+        ISNULL(i.woocommerce_id, '') <> ISNULL(d.woocommerce_id, '');
 END;
-
 
 GO

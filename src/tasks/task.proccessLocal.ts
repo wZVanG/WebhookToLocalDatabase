@@ -1,7 +1,7 @@
 import logger from "logger";
 import { Transaction } from 'npm:mssql@10.0.1';
 import { executeQuery } from '../helpers/db.helper.ts';
-import { WooProduct, WooProductLog, LocalProductStock, LocalSyncExtend, WooProductCategogy } from '../interfaces.ts';
+import { WooProduct, WooProductLog, LocalProductStock, LocalSyncExtend, WooProductCategogy, WooUpsertCategoryResponse, LocalSyncCategory } from '../interfaces.ts';
 import { productSetEan, productSetFields, queryList, replaceQueryValues } from './lib.sync.ts';
 import Woo from "../controllers/woocommerce/index.ts";
 import CONSTANTS from "../constants.ts";
@@ -13,9 +13,13 @@ const tiposSincronizacionProductos: Array<number> = [
 	CONSTANTS.TIPO_SINCRONIZACION.SERVER_STOCK
 ]
 
+const tiposSincronizacionCategorias: Array<number> = [
+	CONSTANTS.TIPO_SINCRONIZACION.SERVER_CATEGORIA
+]
+
 const tiposSincronizacion: Array<number> = [
 	...tiposSincronizacionProductos,
-	CONSTANTS.TIPO_SINCRONIZACION.SERVER_CATEGORIA
+	...tiposSincronizacionCategorias
 ];
 
 const checkDbClient = () => {
@@ -113,59 +117,44 @@ const parseCategoriesBatch = async (db: Transaction, localSyncRecords: LocalProd
 
 	const wooCategoriesBatch: WooProductCategogy[] = [];
 	const syncIdsCategoriesToDelete: number[] = [];
+	const localCategoryRecords = localSyncRecords.filter((item: LocalProductStock) => Number(item.tipo) === CONSTANTS.TIPO_SINCRONIZACION.SERVER_CATEGORIA);
 
-	for (const item of localSyncRecords) {
+	//Llamar a la API de WooCommerce para actualizar o insertar categorías (upsert_categories)
 
-		//Verifica si item es categoría
-		if (Number(item.tipo) !== CONSTANTS.TIPO_SINCRONIZACION.SERVER_CATEGORIA) continue;
-
-		logger.debug(`Categoría a sincronizar: ${item.codigo_item} - ${item.infojson}`);
-
-		/*
-
-		const wooCategoryToAdd = {} as WooProductCategogy;
-		const wooCategoryMatch = wooItems.find((woo_item: WooProduct) => String(woo_item.sku) === String(item.codigo_item));
-
-		if (!wooCategoryMatch) {
-
-			const duplicateCategoryToInsert = wooCategoriesBatch.find((i: WooProductCategogy) => String(i.name) === String(item.codigo_item));
-
-			if (duplicateCategoryToInsert) {
-				logger.debug(`Categoría omitida: ${item.codigo_item}`);
-				continue; //Si ya está en la lista de categorías a insertar, se omite
+	//Preparar lo que se enviará
+	const payLoad = {
+		categories: localCategoryRecords.map(item => {
+			const extended = parseInfoJson(item);
+			if (!extended?.descripcion || !String(extended.descripcion).trim()) return null;
+			return {
+				id: extended.woocommerce_id,
+				name: extended.descripcion,
+				cod_cat_local: item.codigo_item,
 			}
+		}).filter(item => !!item).slice(0, 100) //Limitar la cantidad de categorías a subir a 100
+	}
 
-			wooCategoryToAdd.name = item.codigo_item;
+	if (!payLoad.categories.length) return { wooCategoriesBatch, syncIdsCategoriesToDelete };
 
-		} else {
+	//Llamar a la API de WooCommerce
+	const wooUpserCategoriesResult: WooUpsertCategoryResponse[] = await Woo.post("upsert_categories", payLoad);
 
-			wooCategoryToAdd.id = wooCategoryMatch.id;
-
-			if (item.tipo === CONSTANTS.TIPO_SINCRONIZACION.SERVER_CATEGORIA) {
-
-				if (item.codigo_tienda === "01") {
-					if (item.codigo_tienda === "01" && item.codigo_item !== wooCategoryMatch.name) wooCategoryToAdd.name = item.codigo_item;
-				}
-
-			}
-
+	//Agregar el id de Woocommerce a la tabla de categorías locales
+	for (const categoryResult of wooUpserCategoriesResult) {
+		if (categoryResult.status === "error") {
+			logger.error(`Error al subir categoría a WooCommerce: [${categoryResult.cod_cat_local}] ${categoryResult.error}`);
+			continue;
 		}
-
-		if (wooCategoryMatch) {
-			syncIdsToDelete.push(Number(item.id));
-
-			//Si es una actualización (si el id está presente en wooCategoryMatch) y no hay cambios en la categoría, se omite
-			if (wooCategoryMatch && "id" in wooCategoryToAdd && Object.keys(wooCategoryToAdd).length === 1) {
-				logger.debug(`Categoría omitida a subir: ${item.codigo_item} - ${item.infojson}`);
-				continue;
-			}
-
-			wooCategoriesBatch.push(wooCategoryToAdd);
-		}*/
-
+		const localCategory = localCategoryRecords.find((record: LocalProductStock) => Number(record.codigo_item) === categoryResult.cod_cat_local);
+		if (localCategory) {
+			await executeQuery(db, `UPDATE ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_CATEGORIAS} SET woocommerce_id = ${categoryResult.id} WHERE codcat = ${categoryResult.cod_cat_local}`);
+			syncIdsCategoriesToDelete.push(localCategory.id);
+			logger.info(`Categoría actualizada en Ecommerce: [${categoryResult.cod_cat_local}] ${categoryResult.name} (${categoryResult.id})`);
+		}
 	}
 
 	return { wooCategoriesBatch, syncIdsCategoriesToDelete };
+
 }
 
 const parseProductsBatch = async (db: Transaction, localSyncRecords: LocalProductStock[], wooItems: WooProduct[]) => {
@@ -289,51 +278,65 @@ export default async () => {
 
 				const { wooCategoriesBatch, syncIdsCategoriesToDelete } = await parseCategoriesBatch(db, localSyncRecords, []);
 
-				return;
+				let syncIdsToDelete = [];
 
+				if (syncIdsCategoriesToDelete.length) {
+					//Priorizar la eliminación de categorías antes de sincronizar productos
+					syncIdsToDelete.push(...syncIdsCategoriesToDelete);
 
-				const wooItems = await Woo.get("products_advanced", { skus: skus.join(",") });
+				} else {
 
-				let { wooProductsBatch, syncIdsProductsToDelete } = await parseProductsBatch(db, localSyncRecords, wooItems);
+					//Sincronizar productos
 
-				const productsToInsert = wooProductsBatch.filter((item: WooProduct) => !item.id);
-				const productsToUpdate = wooProductsBatch.filter((item: WooProduct) => !!item.id);
+					if (!skus.length) throw new Error("MESSAGE_EMPTY");
 
-				if (productsToInsert.length) {
+					const wooItems = await Woo.get("products_advanced", { skus: skus.join(",") });
 
-					logger.debug("INSERT BATCH:", productsToInsert);
+					let { wooProductsBatch, syncIdsProductsToDelete } = await parseProductsBatch(db, localSyncRecords, wooItems);
 
-					const productInsertionResult = await Woo.post("products/batch", { create: productsToInsert });
+					syncIdsToDelete.push(...syncIdsProductsToDelete);
 
-					if (!productInsertionResult?.create?.length || productInsertionResult.create.length !== productsToInsert.length) {
-						logger.error(`No se pudo crear los productos en WooCommerce`, productsToInsert);
-						return false;
+					const productsToInsert = wooProductsBatch.filter((item: WooProduct) => !item.id);
+					const productsToUpdate = wooProductsBatch.filter((item: WooProduct) => !!item.id);
+
+					if (productsToInsert.length) {
+
+						logger.debug("INSERT BATCH:", productsToInsert);
+
+						const productInsertionResult = await Woo.post("products/batch", { create: productsToInsert });
+
+						if (!productInsertionResult?.create?.length || productInsertionResult.create.length !== productsToInsert.length) {
+							logger.error(`No se pudo crear los productos en WooCommerce`, productsToInsert);
+							return false;
+						}
+
+						logger.info(`Productos insertados: ${productsToInsert.length}`, productsToInsert);
+
+						//Colocar en syncIdsProductsToDelete solo los productos insertados
+						syncIdsProductsToDelete = localSyncRecords.filter((item: LocalProductStock) => productsToInsert.find((i: WooProduct) => String(i.sku) === String(item.codigo_item))).map((item: LocalProductStock) => item.id);
+
+					} else if (productsToUpdate.length) {
+						logger.debug("UPDATE BATCH:", productsToUpdate);
+
+						const productUpdateResult = await Woo.post("products/batch", { update: productsToUpdate });
+
+						if (!productUpdateResult?.update?.length || productUpdateResult.update.length !== productsToUpdate.length) {
+							logger.error(`No se pudo actualizar los productos en WooCommerce`, productsToUpdate);
+							return false;
+						}
+
+						logger.info(`Productos actualizados: ${productsToUpdate.length}`, productsToUpdate);
 					}
-
-					logger.info(`Productos insertados: ${productsToInsert.length}`, productsToInsert);
-
-					//Colocar en syncIdsProductsToDelete solo los productos insertados
-					syncIdsProductsToDelete = localSyncRecords.filter((item: LocalProductStock) => productsToInsert.find((i: WooProduct) => String(i.sku) === String(item.codigo_item))).map((item: LocalProductStock) => item.id);
-
-				} else if (productsToUpdate.length) {
-					logger.debug("UPDATE BATCH:", productsToUpdate);
-
-					const productUpdateResult = await Woo.post("products/batch", { update: productsToUpdate });
-
-					if (!productUpdateResult?.update?.length || productUpdateResult.update.length !== productsToUpdate.length) {
-						logger.error(`No se pudo actualizar los productos en WooCommerce`, productsToUpdate);
-						return false;
-					}
-
-					logger.info(`Productos actualizados: ${productsToUpdate.length}`, productsToUpdate);
 				}
 
+				if (!syncIdsToDelete.length) {
+					logger.debug(`Alguno(a)s productos/categorias no se han sincronizado en WooCommerce`);
+					return true;
+				}
 
 				//Eliminar filas de sincronización de ids que han sido sincronizados
 				//Eliminar también registros similares de sincronización (registros con el mismo código de item y tipo de sincronización)
 				//Si se ha insertado productos volver a sincronizar para obtener los IDs de los productos insertados
-
-				const syncIdsToDelete = syncIdsProductsToDelete;
 
 				const similarItemsQuery = await executeQuery(db, `
 					SELECT id
@@ -343,7 +346,7 @@ export default async () => {
 						FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_SINCRONIZACION}
 						WHERE id IN (${syncIdsToDelete.join(',')}) 
 					)
-					AND tipo IN (${tiposSincronizacion.join(',')})
+					AND tipo IN (${(syncIdsCategoriesToDelete.length ? tiposSincronizacionCategorias : tiposSincronizacionProductos).join(',')})
 					AND crud IN (
 						SELECT DISTINCT crud
 						FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_SINCRONIZACION}
