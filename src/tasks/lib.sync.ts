@@ -1,8 +1,13 @@
-import { WooProductExtend, WooProductMetaData } from '../interfaces.ts';
+import { WooProduct, WooProductExtended, WooProductMetaData } from '../interfaces.ts';
 import CONSTANTS from "../constants.ts";
 
 export const queryList = {
-	productDetails: `SELECT CODITM, DESITM, UNIDAD, CODEAN, CODMAR, CODLIN, STOCKMIN, ACTIVO FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_PRODUCTOS} WHERE CODITM IN ({skuList})`,
+	//productDetails: `SELECT CODITM, DESITM, UNIDAD, CODEAN, CODMAR, CODLIN, STOCKMIN, ACTIVO FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_PRODUCTOS} WHERE CODITM IN ({skuList})`,
+	productDetails: `
+	SELECT p.CODITM, p.DESITM, p.UNIDAD, p.CODEAN, p.CODMAR, p.CODLIN, p.STOCKMIN, c.codcat, c.woocommerce_id AS woocommerce_id_cat, p.ACTIVO FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_PRODUCTOS} p 
+LEFT JOIN ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_LINEAS} l ON l.CODLIN = p.CODLIN
+LEFT JOIN ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_CATEGORIAS} c ON c.codcat = l.CODCAT
+WHERE p.CODITM IN ({skuList})`,
 	realStock: `SELECT CODITM, STOCK FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_PRODUCTOS_STOCKS} WHERE CODTDA = @codtda AND CODITM IN ({skuList})`,
 	realPrice: `
 	WITH PreciosOrdenados AS (
@@ -40,7 +45,7 @@ export const queryList = {
 	`,
 	localSyncRows: `
 	SELECT TOP 100
-		t1.id, t1.tipo, t1.fecha_transaccion, t1.codigo_tienda, t1.codigo_item, t1.stock, t1.infojson, t1.crud, t1.id_categoria
+		t1.id, t1.tipo, t1.fecha_transaccion, t1.codigo_tienda, t1.codigo_item, t1.stock, t1.infojson, t1.crud
 	FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_SINCRONIZACION} t1
 	INNER JOIN (
 		SELECT 
@@ -59,7 +64,7 @@ export const replaceQueryValues = (query: string, values: { [key: string]: any }
 	});
 }
 
-export const productSetEan = (product: WooProductExtend, ean: string): Array<WooProductMetaData> => {
+export const productSetEan = (product: any, ean: string): Array<WooProductMetaData> => {
 	if (!product.meta_data) product.meta_data = [];
 	const ean_meta = product.meta_data.find((meta: WooProductMetaData) => meta.key === "_alg_ean");
 	if (ean_meta) {
@@ -70,10 +75,20 @@ export const productSetEan = (product: WooProductExtend, ean: string): Array<Woo
 	return product.meta_data;
 }
 
-export const productSetFields = (fields: { [key: string]: any }): WooProductExtend => {
+export const productSetFields = (fields: any): WooProduct => {
 
-	const new_product: WooProductExtend = {};
-	new_product.name = fields.name || `Producto ${fields.sku}`;
+	const new_product: WooProductExtended = {
+		name: "",
+		sku: "",
+		stock_quantity: 0,
+		regular_price: 0,
+		status: "publish",
+		manage_stock: true,
+		short_description: "",
+		categories: [],
+		meta_data: []
+	};
+	new_product.name = fields.name ?? `Producto ${fields.sku}`;
 	new_product.sku = fields.sku;
 	new_product.stock_quantity = fields.stock_quantity || 0;
 	new_product.regular_price = parseFloat(String(fields.regular_price || 0));
@@ -83,6 +98,7 @@ export const productSetFields = (fields: { [key: string]: any }): WooProductExte
 	new_product.low_stock_amount = fields.stockmin ? parseFloat(String(fields.stockmin || 0)) : null;
 
 	if ('description' in fields) new_product.description = fields.description;
+	if (fields.woocommerce_id_cat) new_product.categories = [{ id: fields.woocommerce_id_cat }];
 
 	if (!new_product.regular_price) new_product.status = "pending";
 	new_product.meta_data = productSetEan(fields, String(fields.codean || ""));

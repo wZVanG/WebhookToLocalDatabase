@@ -244,7 +244,7 @@ export default async (task: Task) => {
 				} catch (_) {
 					for (const sku in mapSkuAndContent) {
 						//Comprobar hasOwnProperty para evitar propiedades heredadas
-						logFileValues[sku] = 0;
+						if (sku) logFileValues[sku] = 0;
 					}
 					await Deno.writeTextFile(logFile, JSON.stringify(logFileValues))
 				}
@@ -331,7 +331,9 @@ export default async (task: Task) => {
 						manage_stock: true,
 						unidad: local_products_obj[sku].UNIDAD,
 						codean: local_products_obj[sku].CODEAN,
-						stockmin: local_products_obj[sku].STOCKMIN
+						stockmin: local_products_obj[sku].STOCKMIN,
+						categoria: local_products_obj[sku].codcat,
+						woocommerce_id_cat: local_products_obj[sku].woocommerce_id_cat
 					}), STOCK_EMPTY_SOMEFIELDS ? {
 						description: "",
 						tags: [] //Vaciar etiquetas de Woo

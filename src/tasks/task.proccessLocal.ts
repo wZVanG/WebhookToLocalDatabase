@@ -1,7 +1,7 @@
 import logger from "logger";
 import { Transaction } from 'npm:mssql@10.0.1';
 import { executeQuery } from '../helpers/db.helper.ts';
-import { WooProduct, WooProductLog, LocalProductStock, LocalSyncExtend, WooProductCategogy, WooUpsertCategoryResponse, LocalSyncCategory } from '../interfaces.ts';
+import { WooProduct, WooProductExtended, WooProductLog, LocalProductStock, LocalSyncExtend, WooProductCategogy, WooUpsertCategoryResponse, LocalSyncCategory } from '../interfaces.ts';
 import { productSetEan, productSetFields, queryList, replaceQueryValues } from './lib.sync.ts';
 import Woo from "../controllers/woocommerce/index.ts";
 import CONSTANTS from "../constants.ts";
@@ -137,6 +137,7 @@ const parseCategoriesBatch = async (db: Transaction, localSyncRecords: LocalProd
 	if (!payLoad.categories.length) return { wooCategoriesBatch, syncIdsCategoriesToDelete };
 
 	//Llamar a la API de WooCommerce
+	logger.debug(`UPDATE BATCH:`, payLoad);
 	const wooUpserCategoriesResult: WooUpsertCategoryResponse[] = await Woo.post("upsert_categories", payLoad);
 
 	//Agregar el id de Woocommerce a la tabla de categorías locales
@@ -202,8 +203,10 @@ const parseProductsBatch = async (db: Transaction, localSyncRecords: LocalProduc
 					manage_stock: true,
 					unidad: extendedProduct.unidad,
 					codean: extendedProduct.codean,
-					stockmin: extendedProduct.stockmin
-				}));
+					stockmin: extendedProduct.stockmin,
+					categoria: extendedProduct.categoria,
+					woocommerce_id_cat: extendedProduct.woocommerce_id_cat
+				} as WooProductExtended));
 
 			}
 
@@ -223,9 +226,9 @@ const parseProductsBatch = async (db: Transaction, localSyncRecords: LocalProduc
 				//if (extendedProduct.codlin) wooProductToAdd.categories = [String(extendedProduct.codlin)];
 				if (extendedProduct.stockmin !== wooProductMatch.low_stock_amount) wooProductToAdd.low_stock_amount = Number(extendedProduct.stockmin) || null;
 
-				//Obtener solo la primera categoría que tenga cod_cat_local definido
-				const categoriaActual = wooProductMatch.categories.find((cat: WooProductCategogy) => !!Number(cat.cod_cat_local));
-
+				//Verificar usando some nueva categoría está en la lista de categorías de WooCommerce
+				const existsCat = wooProductMatch.categories.some((cat: WooProductCategogy) => cat.id === Number(extendedProduct.woocommerce_id_cat));
+				if (!existsCat) wooProductToAdd.categories = [{ id: Number(extendedProduct.woocommerce_id_cat) }];
 
 			} else if (item.tipo === CONSTANTS.TIPO_SINCRONIZACION.SERVER_PRECIO) {
 
@@ -234,7 +237,7 @@ const parseProductsBatch = async (db: Transaction, localSyncRecords: LocalProduc
 
 			} else if (item.tipo === CONSTANTS.TIPO_SINCRONIZACION.SERVER_STOCK) {
 
-				logger.debug(`${item.codigo_tienda} (${item.codigo_item}) - ${wooProductMatch.stock_quantity} :: ${item.stock} - ${item.infojson}`);
+				//logger.debug(`${item.codigo_tienda} (${item.codigo_item}) - ${wooProductMatch.stock_quantity} :: ${item.stock} - ${item.infojson}`);
 
 				//Validar si el stock es diferente y validar también la tienda
 				if (item.codigo_tienda === codTda && item.stock !== wooProductMatch.stock_quantity) wooProductToAdd.stock_quantity = item.stock;
@@ -247,7 +250,7 @@ const parseProductsBatch = async (db: Transaction, localSyncRecords: LocalProduc
 
 			//Si es una actualización (si el id está presente en wooProductMatch) y no hay cambios en el producto, se omite
 			if (wooProductMatch && "id" in wooProductToAdd && Object.keys(wooProductToAdd).length === 1) {
-				logger.debug(`Producto omitido a subir: ${item.codigo_item} - ${item.infojson}`);
+				//logger.debug(`Producto omitido a subir: ${item.codigo_item} - ${item.infojson}`);
 				continue;
 			}
 
@@ -257,6 +260,17 @@ const parseProductsBatch = async (db: Transaction, localSyncRecords: LocalProduc
 	}
 
 	return { wooProductsBatch, syncIdsProductsToDelete };
+}
+
+const handleError = (error: Error) => {
+	if (error.message !== "MESSAGE_EMPTY") {
+		//Evitar mostrar información sensible en el log
+		const regex = /c(s|k)_\w+/g;
+		if (error.message && regex.test(error.message)) error.message = error.message.replace(regex, "c$1_XXXXX");
+		logger.error(`Error al ejecutar tarea: taskProccessLocal: ${error.message ? error.message : error.toString()}`);
+	} else {
+		//logger.debug(`No hay productos/categorias para sincronizar en WooCommerce`);
+	}
 }
 
 // deno-lint-ignore require-await
@@ -355,27 +369,18 @@ export default async () => {
 				`);
 
 
-				const idsToDelete: number[] = similarItemsQuery.recordset.map((row: { id: number }) => row.id); // Construir la lista completa de IDs a eliminar, incluyendo los registros similares
+				let idsToDelete: number[] = similarItemsQuery.recordset.map((row: { id: number }) => row.id); // Construir la lista completa de IDs a eliminar, incluyendo los registros similares
 				idsToDelete.push(...syncIdsToDelete); // Agregar los IDs originales de syncIdsToDelete
+				idsToDelete = idsToDelete.filter((value, index, self) => self.indexOf(value) === index); //Eliminar duplicados
 
-				const deleteQueryResult = await executeQuery(db, `DELETE FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_SINCRONIZACION} WHERE id IN (${idsToDelete.join(",")})`);
+				await executeQuery(db, `DELETE FROM ${CONSTANTS.TABLENAMES.LAN_COMMERCE_TABLENAME_SINCRONIZACION} WHERE id IN (${idsToDelete.join(",")})`);
 
-				if (deleteQueryResult.rowsAffected) logger.debug(`Registros eliminados de sincronización: ${deleteQueryResult.rowsAffected}`);
+				logger.debug(`Registros eliminados de sincronización: ${idsToDelete.length}`);
 
 				return true;
 
 			} catch (error) {
-				if (error.message === "MESSAGE_EMPTY") {
-					logger.debug(`No hay productos/categorias para sincronizar en WooCommerce`);
-				} else {
-
-					//Evitar mostrar información sensible en el log
-					const regex = /c(s|k)_\w+/g;
-					if (error.message && regex.test(error.message)) error.message = error.message.replace(regex, "c$1_XXXXX");
-
-					logger.error(`Error al ejecutar tarea: taskProccessLocal: ${error.message ? error.message : error.toString()}`);
-
-				}
+				handleError(error)
 			} finally {
 				isProcessing = false;
 			}

@@ -110,7 +110,7 @@ export default {
 
 			//Genera un archivo csv con los resultados, y se descarga automáticamente
 
-			response.headers.set('Content-Disposition', `attachment; filename=productos_${params.codtda}.csv`);
+			response.headers.set('Content-Disposition', `attachment; filename=productos_con_stock_activos_${params.codtda}.csv`);
 			response.headers.set('Content-Type', 'text/csv');
 			response.body = items.map((item: any) => item.CODITM).join('\n');
 

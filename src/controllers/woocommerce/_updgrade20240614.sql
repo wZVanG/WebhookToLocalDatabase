@@ -250,18 +250,25 @@ BEGIN
     SELECT 
         GETDATE(), 
         @tipo_movimiento, 
-        CODITM, 
+        i.CODITM, 
         '{' +
-        '"descripcion":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(DESITM, '')))) + '",' +
-        '"unidad":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(UNIDAD, '')))) + '",' +
-        '"categoria":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(CODLIN, '')))) + '",' +
-        '"stockmin":' + COALESCE(CAST(STOCKMIN AS NVARCHAR(MAX)), 'null') + ',' +
-        '"activo":' + COALESCE(CAST(ACTIVO AS NVARCHAR(MAX)), '0') + ',' +
-        '"codean":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(CODEAN, '')))) + '"' +
+        '"descripcion":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.DESITM, '')))) + '",' +
+        '"unidad":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.UNIDAD, '')))) + '",' +
+        '"categoria":' + COALESCE(CAST(c.codcat AS NVARCHAR(MAX)), 'null') + ',' +
+        '"woocommerce_id_cat":' + COALESCE(CAST(c.woocommerce_id AS NVARCHAR(MAX)), 'null') + ',' +
+        '"stockmin":' + COALESCE(CAST(i.STOCKMIN AS NVARCHAR(MAX)), 'null') + ',' +
+        '"activo":' + COALESCE(CAST(i.ACTIVO AS NVARCHAR(MAX)), '0') + ',' +
+        '"codean":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.CODEAN, '')))) + '"' +
         '}', 
         'C'
-    FROM inserted;
+    FROM 
+        inserted i
+    LEFT JOIN 
+        TBLINEAS l ON l.CODLIN = i.CODLIN
+    LEFT JOIN 
+        TBCATEGORIAS c ON c.codcat = l.CODCAT;
 END;
+
 GO
 
 -- También creamos el trigger TriggerProductUpdate para insertar en la tabla actualizacion_web_local en caso de que se actualice un producto
@@ -291,7 +298,8 @@ BEGIN
         '{' +
         '"descripcion":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.DESITM, '')))) + '",' +
         '"unidad":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.UNIDAD, '')))) + '",' +
-        '"categoria":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.CODLIN, '')))) + '",' +
+        '"categoria":' + COALESCE(CAST(c.codcat AS NVARCHAR(MAX)), 'null') + ',' +
+        '"woocommerce_id_cat":' + COALESCE(CAST(c.woocommerce_id AS NVARCHAR(MAX)), 'null') + ',' +
         '"stockmin":' + COALESCE(CAST(i.STOCKMIN AS NVARCHAR(MAX)), 'null') + ',' +
         '"activo":' + COALESCE(CAST(i.ACTIVO AS NVARCHAR(MAX)), '0') + ',' +
         '"codean":"' + LTRIM(RTRIM(dbo.EscapeJsonString(COALESCE(i.CODEAN, '')))) + '"' +
@@ -301,14 +309,20 @@ BEGIN
         inserted i
     JOIN 
         deleted d ON i.CODITM = d.CODITM
+    LEFT JOIN 
+        TBLINEAS l ON l.CODLIN = i.CODLIN
+    LEFT JOIN 
+        TBCATEGORIAS c ON c.codcat = l.CODCAT
     WHERE 
         ISNULL(i.DESITM, '') <> ISNULL(d.DESITM, '') OR
         ISNULL(i.UNIDAD, '') <> ISNULL(d.UNIDAD, '') OR
         ISNULL(i.CODLIN, '') <> ISNULL(d.CODLIN, '') OR
         ISNULL(i.ACTIVO, '') <> ISNULL(d.ACTIVO, '') OR
         ISNULL(i.CODEAN, '') <> ISNULL(d.CODEAN, '') OR
+		ISNULL(i.UBICACION, '') <> ISNULL(d.UBICACION, '') OR
         COALESCE(i.STOCKMIN, -1) <> COALESCE(d.STOCKMIN, -1); -- Usamos un valor seguro para comparación numérica
 END;
+
 GO
 
 -- Creamos el trigger TriggerPrecioInsert para insertar en la tabla actualizacion_web_local en caso de que se inserte un nuevo precio
@@ -526,7 +540,9 @@ BEGIN
     WHERE 
         ISNULL(i.descat, '') <> ISNULL(d.descat, '') OR
         ISNULL(i.activo, '') <> ISNULL(d.activo, '') OR
-        ISNULL(i.woocommerce_id, '') <> ISNULL(d.woocommerce_id, '');
+        (ISNULL(i.woocommerce_id, -1) <> ISNULL(d.woocommerce_id, -1) OR 
+        (i.woocommerce_id IS NOT NULL AND d.woocommerce_id IS NULL) OR
+        (i.woocommerce_id = 0 AND d.woocommerce_id IS NULL));
 END;
 
 GO

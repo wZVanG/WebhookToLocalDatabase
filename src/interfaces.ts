@@ -178,7 +178,7 @@ export interface LocalSyncCategory {
 
 export interface WooUpsertCategory {
 	id: number;
-	name: string;
+	name?: string;
 }
 
 export interface WooUpsertCategoryResponse {
@@ -191,24 +191,33 @@ export interface WooUpsertCategoryResponse {
 
 export interface WooProductCategogy {
 	id: number;
-	name: string;
-	cod_cat_local: null | string;
+	name?: string;
+	cod_cat_local?: null | string;
 }
 
 export interface WooProduct {
-	id: number;
+	id?: number;
 	name: string;
 	sku: string;
 	stock_quantity: number;
-	unidad: string;
 	regular_price: number;
 	status: string;
 	manage_stock: boolean;
 	short_description: string;
 	categories: WooProductCategogy[];
+	description?: string | null;
 	low_stock_amount?: number | null;
 	ean?: string;
-	meta_data?: Array<WooProductMetaData>;
+	meta_data?: Array<WooProductMetaData> | null;
+}
+
+export interface WooProductExtended extends WooProduct {
+	unidad?: string;
+	codean?: string;
+	stockmin?: number;
+	activo?: number;
+	categoria?: number[];
+	woocommerce_id_cat?: number | null;
 }
 
 export interface WooProductLog extends WooProduct {
@@ -223,7 +232,6 @@ export interface LocalProductStock {
 	tipo: number;
 	infojson: string;
 	crud: string;
-	id_categoria: number;
 }
 
 export interface LocalProductStockTda {
